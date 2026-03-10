@@ -74,6 +74,7 @@ export default function PassphraseGate() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={isSetup ? 'Create a strong passphrase' : 'Enter your passphrase'}
+              autoComplete={isSetup ? 'new-password' : 'current-password'}
               className="w-full bg-bg-tertiary border border-border-primary rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-blue/50 transition-all pr-10"
               autoFocus
             />
@@ -92,6 +93,7 @@ export default function PassphraseGate() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Confirm passphrase"
+              autoComplete="new-password"
               className="w-full bg-bg-tertiary border border-border-primary rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-blue/50 transition-all"
             />
           )}

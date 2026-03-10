@@ -29,7 +29,10 @@ export function AuthProvider({ children }) {
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/overview' }
+      options: {
+        redirectTo: window.location.origin + '/overview',
+        queryParams: { prompt: 'select_account' }
+      }
     })
     if (error) throw error
   }
