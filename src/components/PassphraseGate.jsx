@@ -5,7 +5,7 @@ import { Lock, Eye, EyeOff, LogOut } from 'lucide-react'
 
 export default function PassphraseGate() {
   const { hasPassphrase, setupPassphrase, unlock } = useData()
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
   const [input, setInput] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -115,13 +115,20 @@ export default function PassphraseGate() {
           </div>
         )}
 
-        <button
-          onClick={signOut}
-          className="w-full mt-4 flex items-center justify-center gap-2 py-2 text-text-muted text-xs hover:text-text-secondary transition-all"
-        >
-          <LogOut size={12} />
-          Sign out
-        </button>
+        <div className="mt-6 pt-4 border-t border-border-primary text-center">
+          {user && (
+            <p className="text-text-muted text-xs mb-2">
+              Signed in as <span className="text-text-secondary">{user.email}</span>
+            </p>
+          )}
+          <button
+            onClick={signOut}
+            className="inline-flex items-center gap-1.5 py-1.5 px-3 text-text-muted text-xs hover:text-text-secondary transition-all"
+          >
+            <LogOut size={12} />
+            Switch account
+          </button>
+        </div>
       </div>
     </div>
   )
