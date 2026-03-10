@@ -8,9 +8,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // If we're returning from an OAuth redirect, stay in loading state
+    // until onAuthStateChange fires with the new session
+    const isOAuthRedirect = window.location.hash.includes('access_token') ||
+      window.location.search.includes('code=')
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      setLoading(false)
+      if (!isOAuthRedirect) setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
