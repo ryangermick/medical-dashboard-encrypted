@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useMemo } from 'react'
 import { useData } from '../context/DataContext'
 import { AlertTriangle, CheckCircle, Info, Lightbulb, TrendingUp } from 'lucide-react'
@@ -16,7 +17,7 @@ export default function Insights() {
 
     // Lab result insights
     labResults.forEach(lab => {
-      const results = typeof lab.results === 'string' ? JSON.parse(lab.results) : lab.results
+      const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       if (Array.isArray(results)) {
         results.forEach(r => {
           if (r.status === 'elevated') {
@@ -29,8 +30,8 @@ export default function Insights() {
     // Weight trend
     const weightData = vitals.filter(v => v.vital_type === 'weight').sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
     if (weightData.length >= 2) {
-      const first = JSON.parse(typeof weightData[0].value === 'string' ? weightData[0].value : JSON.stringify(weightData[0].value))
-      const last = JSON.parse(typeof weightData[weightData.length-1].value === 'string' ? weightData[weightData.length-1].value : JSON.stringify(weightData[weightData.length-1].value))
+      const first = safeJsonParse(typeof weightData[0].value === 'string' ? weightData[0].value : JSON.stringify(weightData[0].value))
+      const last = safeJsonParse(typeof weightData[weightData.length-1].value === 'string' ? weightData[weightData.length-1].value : JSON.stringify(weightData[weightData.length-1].value))
       if (last.avg < first.avg) {
         list.push({ type: 'good', title: 'Weight Trending Down', description: `Lost ${first.avg - last.avg} lbs over ${weightData.length} months. Keep it up!`, category: 'Weight' })
       }
@@ -38,7 +39,7 @@ export default function Insights() {
 
     // Genetics insights
     if (genetics) {
-      const gData = typeof genetics.data === 'string' ? JSON.parse(genetics.data) : genetics.data
+      const gData = typeof genetics.data === 'string' ? safeJsonParse(genetics.data) : genetics.data
       if (gData?.riskFactors) {
         gData.riskFactors.filter(rf => rf.status === 'watch').forEach(rf => {
           list.push({ type: 'watch', title: `${rf.condition} Genetic Risk`, description: `${rf.odds} risk via ${rf.gene} (${rf.snp}). Regular monitoring recommended.`, category: 'Genetics' })
@@ -68,7 +69,7 @@ export default function Insights() {
     const bpData = vitals.filter(v => v.vital_type === 'blood_pressure')
     if (bpData.length) {
       const latest = bpData.sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))[0]
-      const val = typeof latest.value === 'string' ? JSON.parse(latest.value) : latest.value
+      const val = typeof latest.value === 'string' ? safeJsonParse(latest.value) : latest.value
       if (val.systolic < 120 && val.diastolic < 80) {
         list.push({ type: 'good', title: 'Blood Pressure Normal', description: `${val.systolic}/${val.diastolic} mmHg is within normal range.`, category: 'Vitals' })
       }

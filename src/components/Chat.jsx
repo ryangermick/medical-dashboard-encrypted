@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useState, useRef, useEffect } from 'react'
 import { useData } from '../context/DataContext'
 import { Send, Bot, User, Loader2 } from 'lucide-react'
@@ -58,7 +59,7 @@ function buildSystemPrompt(patient, vitals, labResults, medications, allergies, 
   if (Object.keys(latestVitals).length) {
     prompt += 'CURRENT VITALS:\n'
     for (const [type, v] of Object.entries(latestVitals)) {
-      const val = typeof v.value === 'string' ? JSON.parse(v.value) : v.value
+      const val = typeof v.value === 'string' ? safeJsonParse(v.value) : v.value
       if (type === 'blood_pressure') prompt += `- Blood Pressure: ${val.systolic}/${val.diastolic} ${v.unit} (${v.status})\n`
       else prompt += `- ${type.replace(/_/g, ' ')}: ${val.avg ?? val.value ?? JSON.stringify(val)} ${v.unit} (${v.status})\n`
     }
@@ -69,7 +70,7 @@ function buildSystemPrompt(patient, vitals, labResults, medications, allergies, 
   if (labResults.length) {
     prompt += 'BLOOD WORK:\n'
     labResults.forEach(lab => {
-      const results = typeof lab.results === 'string' ? JSON.parse(lab.results) : lab.results
+      const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       const panelName = typeof lab.panel_name === 'string' ? lab.panel_name : 'Panel'
       prompt += `\n${panelName} (${lab.drawn_date}):\n`
       if (Array.isArray(results)) {
@@ -101,7 +102,7 @@ function buildSystemPrompt(patient, vitals, labResults, medications, allergies, 
 
   // Genetics
   if (genetics) {
-    const gData = typeof genetics.data === 'string' ? JSON.parse(genetics.data) : genetics.data
+    const gData = typeof genetics.data === 'string' ? safeJsonParse(genetics.data) : genetics.data
     if (gData) {
       prompt += `GENETICS (${genetics.provider}, ${genetics.coverage} coverage):\n`
       if (gData.riskFactors) {

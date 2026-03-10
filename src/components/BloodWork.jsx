@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useState, useMemo } from 'react'
 import { useData } from '../context/DataContext'
 import { Droplets, CheckCircle, AlertTriangle, ChevronRight } from 'lucide-react'
@@ -34,7 +35,7 @@ export default function BloodWork() {
 
   const panels = useMemo(() => {
     return labResults.map(lab => {
-      const results = typeof lab.results === 'string' ? JSON.parse(lab.results) : lab.results
+      const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       return { ...lab, parsedResults: Array.isArray(results) ? results : [] }
     })
   }, [labResults])

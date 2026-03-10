@@ -1,6 +1,13 @@
 // Client-side encryption using Web Crypto API
 // AES-256-GCM with PBKDF2 key derivation
 
+// Safe JSON parse — returns null on failure instead of throwing
+export function safeJsonParse(str) {
+  if (!str || typeof str !== 'string') return str
+  if (str === '[Decryption failed]') return null
+  try { return JSON.parse(str) } catch { return str }
+}
+
 const SALT_LENGTH = 16
 const IV_LENGTH = 12
 const PBKDF2_ITERATIONS = 600000

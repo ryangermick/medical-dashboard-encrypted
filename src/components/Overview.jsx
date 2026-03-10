@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../context/DataContext'
@@ -34,7 +35,7 @@ function getLatestVital(vitals, type) {
   const filtered = vitals.filter(v => v.vital_type === type).sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))
   if (!filtered.length) return null
   const latest = filtered[0]
-  const val = typeof latest.value === 'string' ? JSON.parse(latest.value) : latest.value
+  const val = typeof latest.value === 'string' ? safeJsonParse(latest.value) : latest.value
   return { ...latest, parsed: val }
 }
 
@@ -43,7 +44,7 @@ function getVitalHistory(vitals, type) {
     .filter(v => v.vital_type === type)
     .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
     .map(v => {
-      const val = typeof v.value === 'string' ? JSON.parse(v.value) : v.value
+      const val = typeof v.value === 'string' ? safeJsonParse(v.value) : v.value
       const month = new Date(v.recorded_at).toLocaleString('default', { month: 'short' })
       return { ...val, month, date: v.recorded_at }
     })
@@ -69,7 +70,7 @@ export default function Overview() {
     const list = []
     // Check lab results for elevated values
     labResults.forEach(lab => {
-      const results = typeof lab.results === 'string' ? JSON.parse(lab.results) : lab.results
+      const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       if (Array.isArray(results)) {
         results.forEach(r => {
           if (r.status === 'elevated') {
@@ -110,11 +111,11 @@ export default function Overview() {
 
   // Health score based on lab results
   const totalMarkers = labResults.reduce((acc, l) => {
-    const res = typeof l.results === 'string' ? JSON.parse(l.results) : l.results
+    const res = typeof l.results === 'string' ? safeJsonParse(l.results) : l.results
     return acc + (Array.isArray(res) ? res.length : 0)
   }, 0)
   const normalMarkers = labResults.reduce((acc, l) => {
-    const res = typeof l.results === 'string' ? JSON.parse(l.results) : l.results
+    const res = typeof l.results === 'string' ? safeJsonParse(l.results) : l.results
     return acc + (Array.isArray(res) ? res.filter(r => r.status === 'normal').length : 0)
   }, 0)
   const healthScore = totalMarkers > 0 ? Math.round((normalMarkers / totalMarkers) * 100) : 0

@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -65,7 +66,7 @@ export default function Profile() {
   const data = editing ? draft : patient
 
   const emergency = typeof patient.emergency_contact === 'string'
-    ? JSON.parse(patient.emergency_contact)
+    ? safeJsonParse(patient.emergency_contact)
     : patient.emergency_contact
 
   return (

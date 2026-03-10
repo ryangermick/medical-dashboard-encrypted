@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../context/DataContext'
@@ -37,7 +38,7 @@ export default function VitalDetail() {
       .filter(v => v.vital_type === vitalId)
       .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
       .map(v => {
-        const val = typeof v.value === 'string' ? JSON.parse(v.value) : v.value
+        const val = typeof v.value === 'string' ? safeJsonParse(v.value) : v.value
         const month = new Date(v.recorded_at).toLocaleString('default', { month: 'short' })
         return { ...val, date: month, recorded_at: v.recorded_at, status: v.status, reference_range: v.reference_range }
       })

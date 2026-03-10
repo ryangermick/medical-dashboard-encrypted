@@ -1,3 +1,4 @@
+import { safeJsonParse } from '../lib/crypto'
 import { useMemo } from 'react'
 import { useData } from '../context/DataContext'
 import { Dna, AlertTriangle, CheckCircle, Shield, Pill, Fingerprint } from 'lucide-react'
@@ -18,7 +19,7 @@ export default function Genetics() {
 
   const gData = useMemo(() => {
     if (!genetics) return null
-    const d = typeof genetics.data === 'string' ? JSON.parse(genetics.data) : genetics.data
+    const d = typeof genetics.data === 'string' ? safeJsonParse(genetics.data) : genetics.data
     return d
   }, [genetics])
 
