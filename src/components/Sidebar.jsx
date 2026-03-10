@@ -38,7 +38,6 @@ export default function Sidebar({ activeTab, setActiveTab, tabs }) {
           title={isUnlocked ? 'Click to lock' : 'Locked'}
         >
           {isUnlocked ? <Unlock size={11} /> : <Lock size={11} />}
-          {isUnlocked ? '🔓' : '🔒'}
         </button>
       </div>
 

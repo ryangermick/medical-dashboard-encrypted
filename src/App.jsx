@@ -16,6 +16,7 @@ import Login from './components/Login'
 import PassphraseGate from './components/PassphraseGate'
 import Settings from './components/Settings'
 import { Lock, Unlock } from 'lucide-react'
+import { ToastProvider } from './components/Toast'
 
 const tabs = [
   { id: 'overview', path: '/overview', label: 'Overview' },
@@ -167,7 +168,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <DataProvider>
-          <AppShell />
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
         </DataProvider>
       </AuthProvider>
     </BrowserRouter>

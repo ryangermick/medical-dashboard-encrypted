@@ -1,16 +1,19 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from './Toast'
 import { Upload as UploadIcon, FileText, CheckCircle, AlertTriangle, Loader2, X } from 'lucide-react'
 import * as db from '../lib/db'
 
 export default function Upload() {
   const { passphrase, loadAllData } = useData()
   const { user } = useAuth()
+  const { addToast } = useToast()
   const [dragging, setDragging] = useState(false)
   const [files, setFiles] = useState([])
   const [processing, setProcessing] = useState(false)
   const [results, setResults] = useState([])
+  const processingRef = useRef(false)
 
   const handleFiles = useCallback(async (fileList) => {
     const newFiles = Array.from(fileList).filter(f =>
@@ -19,6 +22,7 @@ export default function Upload() {
     if (!newFiles.length) return
     setFiles(newFiles)
     setProcessing(true)
+    processingRef.current = true
     setResults([])
 
     for (const file of newFiles) {
@@ -83,8 +87,10 @@ export default function Upload() {
     }
 
     setProcessing(false)
+    processingRef.current = false
     await loadAllData()
-  }, [user, passphrase, loadAllData])
+    addToast(`${newFiles.length} file${newFiles.length > 1 ? 's' : ''} processed — records updated`, 'success')
+  }, [user, passphrase, loadAllData, addToast])
 
   const onDrop = (e) => {
     e.preventDefault()

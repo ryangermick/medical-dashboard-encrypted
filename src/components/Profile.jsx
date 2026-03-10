@@ -29,17 +29,30 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState(null)
 
-  if (!patient) {
+  const emptyProfile = {
+    name: user?.user_metadata?.full_name || '', age: '', sex: '', dob: '', height: '', weight: '',
+    blood_type: '', member_id: '', primary_physician: '', insurance: '', bmi: '', emergency_contact: ''
+  }
+
+  if (!patient && !editing) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold text-text-primary">Profile</h1>
-        <p className="text-text-muted">No profile data yet. Load demo data or upload records.</p>
+        <p className="text-text-muted">No profile data yet.</p>
+        <button
+          onClick={() => { setDraft(emptyProfile); setEditing(true) }}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-blue/10 text-accent-blue text-sm font-medium hover:bg-accent-blue/20 transition-all"
+        >
+          <Pencil size={14} /> Create Profile
+        </button>
       </div>
     )
   }
 
+  const isNew = !patient
+
   const startEdit = () => {
-    setDraft({ ...patient })
+    setDraft({ ...(patient || emptyProfile) })
     setEditing(true)
   }
 
@@ -63,11 +76,13 @@ export default function Profile() {
   }
 
   const update = (key, val) => setDraft(d => ({ ...d, [key]: val }))
-  const data = editing ? draft : patient
+  const data = editing ? draft : (patient || emptyProfile)
 
-  const emergency = typeof patient.emergency_contact === 'string'
-    ? safeJsonParse(patient.emergency_contact)
-    : patient.emergency_contact
+  const emergency = patient?.emergency_contact
+    ? (typeof patient.emergency_contact === 'string'
+      ? safeJsonParse(patient.emergency_contact)
+      : patient.emergency_contact)
+    : null
 
   return (
     <div className="space-y-6">
