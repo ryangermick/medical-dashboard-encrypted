@@ -17,6 +17,11 @@ function str2ab(str) {
   return new TextEncoder().encode(str)
 }
 
+// Zero out a Uint8Array (best-effort memory hygiene)
+function zeroOut(arr) {
+  if (arr instanceof Uint8Array) crypto.getRandomValues(arr)
+}
+
 // Convert ArrayBuffer to base64
 function ab2b64(buffer) {
   const bytes = new Uint8Array(buffer)
@@ -38,14 +43,18 @@ function b642ab(b64) {
 }
 
 // Derive AES-256-GCM key from passphrase using PBKDF2
+// Zeroes the passphrase bytes after importing to minimize memory exposure
 async function deriveKey(passphrase, salt) {
+  const passphraseBytes = str2ab(passphrase)
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
-    str2ab(passphrase),
+    passphraseBytes,
     'PBKDF2',
     false,
     ['deriveKey']
   )
+  // Overwrite passphrase bytes as soon as they're imported into CryptoKey
+  zeroOut(passphraseBytes)
 
   return crypto.subtle.deriveKey(
     {
