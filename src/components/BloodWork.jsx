@@ -1,8 +1,9 @@
 import { safeJsonParse } from '../lib/crypto'
 import { useState, useMemo } from 'react'
 import { useData } from '../context/DataContext'
-import { Droplets, CheckCircle, AlertTriangle, ChevronRight } from 'lucide-react'
+import { Droplets, CheckCircle, AlertTriangle, ChevronRight, TrendingUp } from 'lucide-react'
 import FlagModal from './FlagModal'
+import MarkerTrend from './MarkerTrend'
 
 const StatusBar = ({ value, range, status }) => {
   if (!range) return null
@@ -35,6 +36,7 @@ export default function BloodWork() {
   const { labResults } = useData()
   const [expandedPanel, setExpandedPanel] = useState(0)
   const [selectedFlag, setSelectedFlag] = useState(null)
+  const [selectedMarker, setSelectedMarker] = useState(null)
 
   const panels = useMemo(() => {
     return labResults.map(lab => {
@@ -108,17 +110,20 @@ export default function BloodWork() {
                     {panel.parsedResults.map((result, rIdx) => (
                       <div
                         key={rIdx}
-                        onClick={() => result.status !== 'normal' && setSelectedFlag({ ...result, panel: panelName, drawn_date: panel.drawn_date })}
-                        className={`sm:grid sm:grid-cols-12 gap-4 items-center px-4 py-3 rounded-xl ${result.status !== 'normal' ? 'bg-accent-amber/5 cursor-pointer hover:bg-accent-amber/10' : 'hover:bg-bg-hover'} transition-all`}>
-                        <span className="sm:col-span-3 text-sm text-text-primary font-medium block">{result.name}</span>
+                        className={`sm:grid sm:grid-cols-12 gap-4 items-center px-4 py-3 rounded-xl ${result.status !== 'normal' ? 'bg-accent-amber/5' : 'hover:bg-bg-hover'} transition-all`}>
+                        <span
+                          onClick={() => setSelectedMarker(result)}
+                          className="sm:col-span-3 text-sm text-text-primary font-medium block cursor-pointer hover:text-accent-blue transition-colors"
+                          title="View trend"
+                        >{result.name}</span>
                         <span className={`sm:col-span-2 text-sm font-mono sm:text-right block ${result.status !== 'normal' ? 'text-accent-amber font-semibold' : 'text-text-primary'}`}>{result.value}</span>
                         <span className="sm:col-span-1 text-xs text-text-muted block">{result.unit}</span>
                         <div className="sm:col-span-4 flex items-center gap-3 my-1 sm:my-0">
                           <StatusBar value={result.value} range={result.range} status={result.status} />
                           <span className="text-xs text-text-muted whitespace-nowrap">{result.range}</span>
                         </div>
-                        <div className="sm:col-span-2 flex sm:justify-end">
-                          {result.status === 'normal' ? <CheckCircle size={14} strokeWidth={1.5} className="text-accent-green" /> : <AlertTriangle size={14} strokeWidth={1.5} className="text-accent-amber" />}
+                        <div className="sm:col-span-2 flex sm:justify-end" onClick={() => result.status !== 'normal' && setSelectedFlag({ ...result, panel: panelName, drawn_date: panel.drawn_date })}>
+                          {result.status === 'normal' ? <CheckCircle size={14} strokeWidth={1.5} className="text-accent-green" /> : <AlertTriangle size={14} strokeWidth={1.5} className="text-accent-amber cursor-pointer hover:text-accent-red transition-colors" />}
                         </div>
                       </div>
                     ))}
@@ -131,6 +136,7 @@ export default function BloodWork() {
       </div>
 
       <FlagModal flag={selectedFlag} onClose={() => setSelectedFlag(null)} />
+      <MarkerTrend marker={selectedMarker} panels={panels} onClose={() => setSelectedMarker(null)} />
     </div>
   )
 }
