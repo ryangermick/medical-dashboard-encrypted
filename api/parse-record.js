@@ -20,9 +20,14 @@ Return a JSON object with these optional arrays:
   "labResults": [{ "panel_name": "string", "panel_abbr": "string", "drawn_date": "YYYY-MM-DD", "results": "[{name, value, unit, range, status}]" }],
   "medications": [{ "name": "string", "dose": "string", "frequency": "string", "purpose": "string", "start_date": "YYYY-MM-DD", "active": true }],
   "allergies": [{ "allergen": "string", "severity": "Mild|Moderate|Severe", "reaction": "string", "confirmed": true }],
-  "genetics": { "riskFactors": [{ "condition": "string", "gene": "string", "snp": "string", "odds": "string (e.g. '1.3x')", "status": "watch|good" }], "pharmacogenomics": [{ "drug": "string", "gene": "string", "metabolism": "Normal|Poor|Rapid|Intermediate", "note": "string" }], "ancestry": { "summary": "string" }, "rawSnps": [{ "rsid": "string", "genotype": "string", "gene": "string", "significance": "string" }] }
+  "genetics": { "riskFactors": [{ "condition": "string", "gene": "string", "snp": "string", "odds": "string (e.g. '1.3x')", "status": "watch|good" }], "pharmacogenomics": [{ "drug": "string", "gene": "string", "metabolism": "Normal|Poor|Rapid|Intermediate", "note": "string" }], "ancestry": { "composition": [{"population": "string", "percentage": 0}], "maternalHaplogroup": "string", "paternalHaplogroup": "string", "summary": "string" }, "carrierStatus": [{ "condition": "string", "status": "carrier|not_a_carrier|likely_not_a_carrier", "gene": "string" }], "traits": [{ "trait": "string", "result": "string" }], "wellness": [{ "topic": "string", "result": "string", "detail": "string" }] }
 }
-Only include arrays/objects that have data. For 23andMe or genetic data, extract risk factors, pharmacogenomics, and notable SNPs. Return ONLY valid JSON, no markdown.`;
+IMPORTANT ROUTING RULES:
+- "labResults" is ONLY for blood tests, urine tests, and clinical laboratory panels (CBC, CMP, lipid panels, A1C, etc.)
+- "genetics" is for ALL genetic/genomic data including: 23andMe, ancestry composition, haplogroups, health predispositions, carrier status, wellness reports, traits, pharmacogenomics, and raw SNP data
+- NEVER put ancestry, traits, wellness, carrier status, or health predisposition data into labResults — those go in genetics
+- For 23andMe reports: put ancestry in genetics.ancestry, health risks in genetics.riskFactors, carrier status in genetics.carrierStatus, traits/wellness in genetics.traits
+Only include arrays/objects that have data. Return ONLY valid JSON, no markdown.`;
 
   try {
     const parts = [
