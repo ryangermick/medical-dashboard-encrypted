@@ -81,11 +81,13 @@ export default function MarkerTrend({ marker, panels, onClose }) {
     navigate('/ask-ai', { state: { prefill: `My ${marker.name} has ${trend} from ${oldest.value} to ${latest.value} ${latest.unit} over ${history.length} readings (${oldest.date} to ${latest.date}). Normal range is ${refRange || 'unknown'}. What does this trend mean?` } })
   }
 
-  const CustomDot = ({ cx, cy, payload }) => {
+  const renderDot = (props) => {
+    const { cx, cy, payload } = props
+    if (cx == null || cy == null) return null
     const normalStatuses = ['normal', 'optimal', 'within range']
-    const isNormal = payload.status && normalStatuses.includes((payload.status || '').toLowerCase())
+    const isNormal = payload?.status && normalStatuses.includes((payload.status || '').toLowerCase())
     return (
-      <circle cx={cx} cy={cy} r={5} fill={isNormal ? '#22c55e' : '#f59e0b'} stroke="#14141f" strokeWidth={2} />
+      <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={5} fill={isNormal ? '#22c55e' : '#f59e0b'} stroke="#14141f" strokeWidth={2} />
     )
   }
 
@@ -151,7 +153,7 @@ export default function MarkerTrend({ marker, panels, onClose }) {
                   formatter={(val) => [`${val} ${latest.unit}`, marker.name]}
                   labelFormatter={(label) => label}
                 />
-                <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="url(#trendGrad)" strokeWidth={2} dot={<CustomDot />} />
+                <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="url(#trendGrad)" strokeWidth={2} dot={renderDot} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
