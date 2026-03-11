@@ -5,6 +5,7 @@ import { encryptFields, decryptFields } from './crypto'
 // Field definitions: which fields to encrypt per table
 const ENCRYPTED_FIELDS = {
   patients: ['name', 'dob', 'sex', 'height', 'weight', 'blood_type', 'primary_physician', 'insurance', 'emergency_contact', 'member_id'],
+  chat_messages: ['content'],
   vitals: ['value', 'notes'],
   lab_results: ['panel_name', 'results'],  // results is JSON
   medications: ['name', 'dose', 'purpose', 'frequency'],
@@ -227,5 +228,60 @@ export async function clearAllUserData(userId) {
   await supabase.from('allergies').delete().eq('user_id', userId)
   await supabase.from('genetics').delete().eq('user_id', userId)
   await supabase.from('documents').delete().eq('user_id', userId)
+  await supabase.from('chat_messages').delete().eq('user_id', userId)
+  await supabase.from('chat_sessions').delete().eq('user_id', userId)
   await supabase.from('patients').delete().eq('user_id', userId)
+}
+
+// ---- Chat Sessions ----
+export async function getChatSessions(userId) {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function createChatSession(userId, title) {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .insert({ user_id: userId, title: title || 'New Chat' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateChatSessionTitle(sessionId, title) {
+  await supabase.from('chat_sessions').update({ title, updated_at: new Date().toISOString() }).eq('id', sessionId)
+}
+
+export async function deleteChatSession(sessionId) {
+  await supabase.from('chat_messages').delete().eq('session_id', sessionId)
+  await supabase.from('chat_sessions').delete().eq('id', sessionId)
+}
+
+export async function getChatMessages(sessionId, userId, passphrase) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  if (!data) return []
+  return Promise.all(data.map(m => decryptFields(m, ENCRYPTED_FIELDS.chat_messages, passphrase)))
+}
+
+export async function saveChatMessage(sessionId, userId, role, content, passphrase) {
+  const encrypted = await encryptFields(
+    { session_id: sessionId, user_id: userId, role, content },
+    ENCRYPTED_FIELDS.chat_messages,
+    passphrase
+  )
+  const { error } = await supabase.from('chat_messages').insert(encrypted)
+  if (error) throw error
+  // Update session timestamp
+  await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId)
 }
