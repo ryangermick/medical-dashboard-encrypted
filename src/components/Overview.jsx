@@ -103,15 +103,10 @@ export default function Overview() {
   if (!hasAnyData) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-text-muted mb-4">No data yet. Upload medical records or create a profile to get started.</p>
-        <div className="flex gap-3">
-          <button onClick={() => navigate('/upload')} className="px-4 py-2 rounded-xl bg-accent-blue text-white text-sm hover:bg-accent-blue/80 transition-all">
-            Upload Records
-          </button>
-          <button onClick={() => navigate('/profile')} className="px-4 py-2 rounded-xl bg-bg-tertiary text-text-primary text-sm hover:bg-bg-hover transition-all border border-border-primary">
-            Create Profile
-          </button>
-        </div>
+        <p className="text-text-muted mb-4">No data yet. Upload medical records to get started.</p>
+        <button onClick={() => navigate('/upload')} className="px-4 py-2 rounded-xl bg-accent-blue text-white text-sm hover:bg-accent-blue/80 transition-all">
+          Upload Records
+        </button>
       </div>
     )
   }

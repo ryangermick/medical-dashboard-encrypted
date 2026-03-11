@@ -34,22 +34,12 @@ export default function Profile() {
     blood_type: '', member_id: '', primary_physician: '', insurance: '', bmi: '', emergency_contact: ''
   }
 
-  if (!patient && !editing) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold text-text-primary">Profile</h1>
-        <p className="text-text-muted">No profile data yet.</p>
-        <button
-          onClick={() => { setDraft(emptyProfile); setEditing(true) }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-blue/10 text-accent-blue text-sm font-medium hover:bg-accent-blue/20 transition-all"
-        >
-          <Pencil size={14} /> Create Profile
-        </button>
-      </div>
-    )
-  }
-
+  // Auto-enter edit mode if no patient exists
   const isNew = !patient
+  if (!patient && !editing && !draft) {
+    // Immediately start editing with empty profile
+    setTimeout(() => { setDraft(emptyProfile); setEditing(true) }, 0)
+  }
 
   const startEdit = () => {
     setDraft({ ...(patient || emptyProfile) })
