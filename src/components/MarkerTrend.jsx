@@ -5,12 +5,11 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceL
 
 export default function MarkerTrend({ marker, panels, onClose }) {
   const navigate = useNavigate()
-  if (!marker) return null
-
-  const markerName = typeof markerName === 'string' ? markerName : String(markerName || '')
+  const markerName = marker ? (typeof marker === 'string' ? marker : String(marker?.name || marker || '')) : ''
 
   // Find all instances of this marker across all panels
   const history = useMemo(() => {
+    if (!marker) return []
     const points = []
     panels.forEach(panel => {
       if (!panel.drawn_date) return

@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
+import { authFetch } from '../lib/api'
 import { Upload as UploadIcon, FileText, CheckCircle, AlertTriangle, Loader2, X } from 'lucide-react'
 import * as db from '../lib/db'
 
@@ -35,10 +36,9 @@ export default function Upload() {
           reader.readAsDataURL(file)
         })
 
-        // Send to parse API
-        const res = await fetch('/api/parse-record', {
+        // Send to parse API (authenticated)
+        const res = await authFetch('/api/parse-record', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             file: base64,
             filename: file.name,

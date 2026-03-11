@@ -1,6 +1,19 @@
+import { verifyAuth } from './_auth.js';
+import { rateLimit } from './_rateLimit.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Verify authenticated user
+  const user = await verifyAuth(req, res);
+  if (!user) return; // 401 already sent
+
+  // Rate limit: 10 parse requests per minute per user
+  const rl = rateLimit(user.id, { maxRequests: 10, windowMs: 60000 });
+  if (!rl.allowed) {
+    return res.status(429).json({ error: 'Too many requests. Try again shortly.', retryAfter: rl.retryAfter });
   }
 
   const { file, filename, mimeType } = req.body;

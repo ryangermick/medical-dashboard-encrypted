@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { getCachedPassphrase, cachePassphrase, clearCachedPassphrase, createVerificationHash, verifyPassphrase } from '../lib/crypto'
 import * as db from '../lib/db'
@@ -112,7 +112,7 @@ export function DataProvider({ children }) {
     return false
   }
 
-  const lock = () => {
+  const lock = useCallback(() => {
     clearCachedPassphrase()
     setPassphrase(null)
     setIsUnlocked(false)
@@ -123,7 +123,33 @@ export function DataProvider({ children }) {
     setAllergies([])
     setGenetics(null)
     setDocuments([])
-  }
+  }, [])
+
+  // Auto-lock after 15 minutes of inactivity
+  const AUTO_LOCK_MS = 15 * 60 * 1000
+  const lockTimerRef = useRef(null)
+
+  useEffect(() => {
+    if (!isUnlocked) return
+
+    const resetTimer = () => {
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
+      lockTimerRef.current = setTimeout(() => {
+        console.log('Auto-locking due to inactivity')
+        lock()
+      }, AUTO_LOCK_MS)
+    }
+
+    // Reset on user activity
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+    resetTimer()
+
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetTimer))
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
+    }
+  }, [isUnlocked, lock])
 
   return (
     <DataContext.Provider value={{

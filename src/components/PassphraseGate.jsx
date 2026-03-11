@@ -1,7 +1,30 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { Lock, Eye, EyeOff, LogOut } from 'lucide-react'
+
+function getPassphraseStrength(pw) {
+  if (!pw) return { score: 0, label: '', color: '' }
+  let score = 0
+  if (pw.length >= 12) score++
+  if (pw.length >= 16) score++
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++
+  if (/\d/.test(pw)) score++
+  if (/[^a-zA-Z0-9]/.test(pw)) score++
+  if (pw.length >= 20) score++
+  // Penalize common patterns
+  if (/^(.)\1+$/.test(pw) || /^(012|123|234|345|456|567|678|789|abc|password|qwerty)/i.test(pw)) score = Math.max(0, score - 2)
+  const levels = [
+    { label: 'Very weak', color: 'bg-accent-red' },
+    { label: 'Weak', color: 'bg-accent-red' },
+    { label: 'Fair', color: 'bg-accent-amber' },
+    { label: 'Good', color: 'bg-accent-amber' },
+    { label: 'Strong', color: 'bg-accent-green' },
+    { label: 'Very strong', color: 'bg-accent-green' },
+  ]
+  const idx = Math.min(score, levels.length - 1)
+  return { score, max: levels.length, label: levels[idx].label, color: levels[idx].color }
+}
 
 export default function PassphraseGate() {
   const { hasPassphrase, setupPassphrase, unlock } = useData()
@@ -13,6 +36,7 @@ export default function PassphraseGate() {
   const [loading, setLoading] = useState(false)
 
   const isSetup = hasPassphrase === false
+  const strength = useMemo(() => getPassphraseStrength(input), [input])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,8 +45,8 @@ export default function PassphraseGate() {
 
     try {
       if (isSetup) {
-        if (input.length < 8) {
-          setError('Passphrase must be at least 8 characters')
+        if (input.length < 12) {
+          setError('Passphrase must be at least 12 characters — this protects your medical data')
           setLoading(false)
           return
         }
@@ -86,6 +110,17 @@ export default function PassphraseGate() {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+
+          {isSetup && input && (
+            <div className="space-y-1.5">
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < Math.ceil(strength.score * 5 / strength.max) ? strength.color : 'bg-bg-tertiary'}`} />
+                ))}
+              </div>
+              <p className="text-xs text-text-muted">{strength.label}{input.length < 12 ? ` — need ${12 - input.length} more characters` : ''}</p>
+            </div>
+          )}
 
           {isSetup && (
             <input

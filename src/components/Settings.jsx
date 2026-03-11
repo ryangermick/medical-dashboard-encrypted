@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { loadDemoData } from '../lib/demoData'
-import { Database, Loader2, CheckCircle, Trash2, Shield } from 'lucide-react'
+import { Database, Loader2, CheckCircle, Trash2, Shield, Lock, Clock } from 'lucide-react'
 import * as db from '../lib/db'
 
 export default function Settings() {
@@ -12,6 +12,9 @@ export default function Settings() {
   const [progress, setProgress] = useState('')
   const [done, setDone] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [clearPassphrase, setClearPassphrase] = useState('')
+  const [clearError, setClearError] = useState(null)
 
   const handleLoadDemo = async () => {
     if (!passphrase || !user) return
@@ -30,13 +33,20 @@ export default function Settings() {
   }
 
   const handleClear = async () => {
-    if (!confirm('This will delete ALL your medical data. Are you sure?')) return
+    // Require passphrase re-entry for destructive action
+    if (clearPassphrase !== passphrase) {
+      setClearError('Incorrect passphrase')
+      return
+    }
     setClearing(true)
+    setClearError(null)
     try {
       await db.clearAllUserData(user.id)
       await loadAllData()
       setProgress('All data cleared.')
       setDone(false)
+      setShowClearConfirm(false)
+      setClearPassphrase('')
     } catch (err) {
       setProgress(`Error: ${err.message}`)
     } finally {
@@ -67,8 +77,8 @@ export default function Settings() {
             <p className="text-sm text-text-primary font-medium">PBKDF2 (600K iterations)</p>
           </div>
           <div className="bg-bg-tertiary rounded-xl p-4">
-            <p className="text-xs text-text-muted">Session Key</p>
-            <p className="text-sm text-accent-green font-medium">Cached (tab only)</p>
+            <p className="text-xs text-text-muted">Auto-Lock</p>
+            <p className="text-sm text-accent-green font-medium flex items-center gap-1"><Clock size={12} /> 15 min inactivity</p>
           </div>
         </div>
       </div>
@@ -94,17 +104,51 @@ export default function Settings() {
             {loading ? 'Loading...' : 'Load Demo Data'}
           </button>
 
-          {patient && (
+          {patient && !showClearConfirm && (
             <button
-              onClick={handleClear}
+              onClick={() => setShowClearConfirm(true)}
               disabled={loading || clearing}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-accent-red/30 text-accent-red hover:bg-accent-red/10 font-medium text-sm disabled:opacity-50 transition-all"
             >
-              {clearing ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              {clearing ? 'Clearing...' : 'Clear All Data'}
+              <Trash2 size={16} />
+              Clear All Data
             </button>
           )}
         </div>
+
+        {showClearConfirm && (
+          <div className="mt-4 p-4 rounded-xl bg-accent-red/5 border border-accent-red/20 space-y-3">
+            <div className="flex items-center gap-2 text-accent-red text-sm font-medium">
+              <Lock size={14} /> Re-enter passphrase to confirm deletion
+            </div>
+            <p className="text-xs text-text-muted">This will permanently delete ALL your medical data. This cannot be undone.</p>
+            <input
+              type="password"
+              value={clearPassphrase}
+              onChange={(e) => { setClearPassphrase(e.target.value); setClearError(null) }}
+              placeholder="Enter your passphrase"
+              autoComplete="current-password"
+              className="w-full bg-bg-tertiary border border-border-primary rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-red/50 transition-all"
+            />
+            {clearError && <p className="text-accent-red text-xs">{clearError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={handleClear}
+                disabled={clearing || !clearPassphrase}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-red hover:bg-accent-red/80 text-white text-sm font-medium disabled:opacity-50 transition-all"
+              >
+                {clearing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {clearing ? 'Clearing...' : 'Delete Everything'}
+              </button>
+              <button
+                onClick={() => { setShowClearConfirm(false); setClearPassphrase(''); setClearError(null) }}
+                className="px-4 py-2 rounded-xl bg-bg-tertiary text-text-muted text-sm hover:bg-bg-hover transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {progress && (
           <div className="mt-4 flex items-center gap-2">

@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { authFetch } from '../lib/api'
 import { Send, Bot, User, Loader2, Plus, Trash2, MessageCircle } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import * as db from '../lib/db'
@@ -65,12 +66,17 @@ function buildSystemPrompt(patient, vitals, labResults, medications, allergies, 
   }
 
   if (labResults.length) {
-    prompt += 'LAB RESULTS:\n'
-    labResults.forEach(lab => {
+    // Send only the 3 most recent panels, with full detail for flagged markers and summary for normal ones
+    const recentLabs = labResults.slice(0, 3)
+    prompt += `LAB RESULTS (${labResults.length} panels total, showing ${recentLabs.length} most recent):\n`
+    recentLabs.forEach(lab => {
       const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       if (Array.isArray(results)) {
+        const flagged = results.filter(r => r.status !== 'normal')
+        const normalCount = results.length - flagged.length
         prompt += `${lab.panel_name} (${lab.panel_abbr}, drawn ${lab.drawn_date}):\n`
-        results.forEach(r => prompt += `  - ${r.name}: ${r.value} ${r.unit} (${r.status}, range: ${r.range})\n`)
+        flagged.forEach(r => prompt += `  ⚠️ ${r.name}: ${r.value} ${r.unit} (${r.status}, range: ${r.range})\n`)
+        if (normalCount) prompt += `  ✓ ${normalCount} other markers normal\n`
       }
     })
     prompt += '\n'
@@ -204,11 +210,16 @@ export default function Chat() {
     }
 
     try {
-      const systemPrompt = buildSystemPrompt(patient, vitals, labResults, medications, allergies, genetics)
-      const res = await fetch('/api/chat', {
+      // Inject health context as first message so server doesn't need client system prompt
+      const healthContext = buildSystemPrompt(patient, vitals, labResults, medications, allergies, genetics)
+      const contextMessages = [
+        { role: 'user', content: `[Health Context — use this to personalize responses]\n${healthContext}` },
+        { role: 'assistant', content: 'I have your health context. How can I help?' },
+        ...newMessages,
+      ]
+      const res = await authFetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, systemPrompt }),
+        body: JSON.stringify({ messages: contextMessages }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)

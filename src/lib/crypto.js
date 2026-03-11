@@ -157,16 +157,59 @@ export async function verifyPassphrase(passphrase, storedHash) {
 }
 
 // Cache key management using sessionStorage
-const SESSION_KEY = 'meddash_passphrase'
+// Passphrase is obfuscated — not stored in plaintext
+// Uses a per-tab random key to XOR the passphrase before storing
+const SESSION_KEY = 'meddash_pp'
+const OBFUSCATION_KEY = 'meddash_ok'
+
+function getOrCreateObfuscationKey() {
+  let key = sessionStorage.getItem(OBFUSCATION_KEY)
+  if (!key) {
+    const bytes = crypto.getRandomValues(new Uint8Array(64))
+    key = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+    sessionStorage.setItem(OBFUSCATION_KEY, key)
+  }
+  return key
+}
+
+function xorObfuscate(str, hexKey) {
+  const keyBytes = hexKey.match(/.{2}/g).map(h => parseInt(h, 16))
+  const encoded = new TextEncoder().encode(str)
+  const result = new Uint8Array(encoded.length)
+  for (let i = 0; i < encoded.length; i++) {
+    result[i] = encoded[i] ^ keyBytes[i % keyBytes.length]
+  }
+  return btoa(String.fromCharCode(...result))
+}
+
+function xorDeobfuscate(b64, hexKey) {
+  const keyBytes = hexKey.match(/.{2}/g).map(h => parseInt(h, 16))
+  const binary = atob(b64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length]
+  }
+  return new TextDecoder().decode(bytes)
+}
 
 export function getCachedPassphrase() {
-  return sessionStorage.getItem(SESSION_KEY)
+  const stored = sessionStorage.getItem(SESSION_KEY)
+  if (!stored) return null
+  try {
+    const key = sessionStorage.getItem(OBFUSCATION_KEY)
+    if (!key) return null
+    return xorDeobfuscate(stored, key)
+  } catch {
+    return null
+  }
 }
 
 export function cachePassphrase(passphrase) {
-  sessionStorage.setItem(SESSION_KEY, passphrase)
+  const key = getOrCreateObfuscationKey()
+  sessionStorage.setItem(SESSION_KEY, xorObfuscate(passphrase, key))
 }
 
 export function clearCachedPassphrase() {
   sessionStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(OBFUSCATION_KEY)
 }
