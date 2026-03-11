@@ -7,20 +7,24 @@ export default function MarkerTrend({ marker, panels, onClose }) {
   const navigate = useNavigate()
   if (!marker) return null
 
+  const markerName = typeof markerName === 'string' ? markerName : String(markerName || '')
+
   // Find all instances of this marker across all panels
   const history = useMemo(() => {
     const points = []
     panels.forEach(panel => {
       if (!panel.drawn_date) return
       panel.parsedResults.forEach(r => {
-        if (r.name === marker.name) {
+        if (r.name === markerName) {
+          const numVal = parseFloat(typeof r.value === 'object' ? JSON.stringify(r.value) : r.value)
+          if (isNaN(numVal)) return
           points.push({
             date: panel.drawn_date,
-            value: parseFloat(r.value),
-            unit: r.unit,
-            range: r.range,
-            status: r.status,
-            panel: typeof panel.panel_name === 'string' ? panel.panel_name : panel.panel_abbr || 'Panel',
+            value: numVal,
+            unit: String(r.unit || ''),
+            range: r.range ? String(r.range) : null,
+            status: r.status ? String(r.status) : null,
+            panel: typeof panel.panel_name === 'string' ? panel.panel_name : String(panel.panel_abbr || 'Panel'),
           })
         }
       })
@@ -34,7 +38,7 @@ export default function MarkerTrend({ marker, panels, onClose }) {
       seen.add(p.date)
       return true
     })
-  }, [marker, panels])
+  }, [markerName, panels])
 
   if (!history.length) return null
 
@@ -78,7 +82,7 @@ export default function MarkerTrend({ marker, panels, onClose }) {
   const chatAbout = () => {
     onClose()
     const trend = change > 0 ? 'increased' : change < 0 ? 'decreased' : 'stayed the same'
-    navigate('/ask-ai', { state: { prefill: `My ${marker.name} has ${trend} from ${oldest.value} to ${latest.value} ${latest.unit} over ${history.length} readings (${oldest.date} to ${latest.date}). Normal range is ${refRange || 'unknown'}. What does this trend mean?` } })
+    navigate('/ask-ai', { state: { prefill: `My ${markerName} has ${trend} from ${oldest.value} to ${latest.value} ${latest.unit} over ${history.length} readings (${oldest.date} to ${latest.date}). Normal range is ${refRange || 'unknown'}. What does this trend mean?` } })
   }
 
   const renderDot = (props) => {
@@ -98,7 +102,7 @@ export default function MarkerTrend({ marker, panels, onClose }) {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">{marker.name}</h2>
+            <h2 className="text-lg font-semibold text-text-primary">{markerName}</h2>
             <p className="text-xs text-text-muted mt-1">{history.length} reading{history.length > 1 ? 's' : ''} • {oldest.date} → {latest.date}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg-hover text-text-muted">
@@ -150,7 +154,7 @@ export default function MarkerTrend({ marker, panels, onClose }) {
                 <YAxis domain={[yMin, yMax]} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} width={35} />
                 <Tooltip
                   contentStyle={{ background: '#14141f', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '12px' }}
-                  formatter={(val) => [`${val} ${latest.unit}`, marker.name]}
+                  formatter={(val) => [`${val} ${latest.unit}`, markerName]}
                   labelFormatter={(label) => label}
                 />
                 <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="url(#trendGrad)" strokeWidth={2} dot={renderDot} />
