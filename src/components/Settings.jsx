@@ -162,12 +162,22 @@ export default function Settings() {
       <div className="glass rounded-2xl p-5">
         <h3 className="text-xs text-text-muted uppercase tracking-wider mb-4">How Encryption Works</h3>
         <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
-          <p>• Your passphrase derives an AES-256-GCM encryption key using PBKDF2 with 600,000 iterations.</p>
-          <p>• Sensitive fields (names, lab values, diagnoses, medications) are encrypted <strong className="text-text-primary">in your browser</strong> before being sent to the database.</p>
-          <p>• The database only stores ciphertext — a breach reveals nothing useful.</p>
-          <p>• Metadata (dates, record types) stays unencrypted for querying.</p>
-          <p>• Your derived key is cached in sessionStorage — it's cleared when you close the tab.</p>
-          <p>• AI chat receives decrypted data only for the API call — never stored server-side.</p>
+          <p className="font-medium text-text-primary text-xs uppercase tracking-wider mt-1 mb-0.5">Zero-Knowledge Encryption</p>
+          <p>• Your passphrase derives an AES-256-GCM key using PBKDF2 with 600,000 iterations — a fresh random salt and IV are generated for every single encryption, so identical data never produces identical ciphertext.</p>
+          <p>• Sensitive fields (names, lab values, diagnoses, medications) are encrypted <strong className="text-text-primary">entirely in your browser</strong> before being sent to the database. The server never sees plaintext.</p>
+          <p>• Metadata (dates, record types) stays unencrypted for querying — the tradeoff is that <em>what types</em> of records exist is visible, but not their content.</p>
+
+          <p className="font-medium text-text-primary text-xs uppercase tracking-wider mt-3 mb-0.5">Passphrase Protection</p>
+          <p>• Your passphrase is cached using a <strong className="text-text-primary">non-extractable Web Crypto wrapping key</strong> stored in IndexedDB — even if malicious code reads sessionStorage, it gets ciphertext that can't be decrypted without the browser-protected key.</p>
+          <p>• Passphrase bytes are zeroed from memory immediately after key derivation. The session auto-locks after 15 minutes of inactivity.</p>
+
+          <p className="font-medium text-text-primary text-xs uppercase tracking-wider mt-3 mb-0.5">Recovery & Delivery</p>
+          <p>• A recovery code (8 random words) is generated during setup. Your passphrase is encrypted with it and stored — so if you forget your passphrase, the recovery code can restore access without compromising zero-knowledge.</p>
+          <p>• All scripts are verified with <strong className="text-text-primary">Subresource Integrity (SRI)</strong> hashes — if the server is compromised and serves modified code, your browser refuses to run it.</p>
+          <p>• Content Security Policy blocks inline scripts and unauthorized sources.</p>
+
+          <p className="font-medium text-text-primary text-xs uppercase tracking-wider mt-3 mb-0.5">AI Chat</p>
+          <p>• AI chat receives decrypted data only for the API call — never stored server-side. All API endpoints require authentication.</p>
         </div>
       </div>
     </div>
