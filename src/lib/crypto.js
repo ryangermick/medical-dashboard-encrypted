@@ -156,60 +156,93 @@ export async function verifyPassphrase(passphrase, storedHash) {
   }
 }
 
-// Cache key management using sessionStorage
-// Passphrase is obfuscated — not stored in plaintext
-// Uses a per-tab random key to XOR the passphrase before storing
-const SESSION_KEY = 'meddash_pp'
-const OBFUSCATION_KEY = 'meddash_ok'
+// Cache key management using Web Crypto non-extractable wrapping key + IndexedDB
+// The wrapping key lives in browser-protected memory (non-extractable CryptoKey).
+// Even if XSS reads sessionStorage, it gets ciphertext it can't decrypt without
+// the non-extractable key from IndexedDB.
 
-function getOrCreateObfuscationKey() {
-  let key = sessionStorage.getItem(OBFUSCATION_KEY)
-  if (!key) {
-    const bytes = crypto.getRandomValues(new Uint8Array(64))
-    key = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
-    sessionStorage.setItem(OBFUSCATION_KEY, key)
-  }
+const DB_NAME = 'meddash_keystore'
+const DB_STORE = 'keys'
+const WRAP_KEY_ID = 'wrap_v1'
+const SESSION_KEY = 'meddash_pp_wrapped'
+const SESSION_IV = 'meddash_pp_iv'
+
+function openKeyStore() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1)
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function getOrCreateWrappingKey() {
+  const idb = await openKeyStore()
+  // Try to load existing key
+  const existing = await new Promise((resolve, reject) => {
+    const tx = idb.transaction(DB_STORE, 'readonly')
+    const req = tx.objectStore(DB_STORE).get(WRAP_KEY_ID)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+  if (existing) return existing
+
+  // Generate a non-extractable AES-GCM key
+  const key = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    false, // NON-EXTRACTABLE — JS cannot read the raw key bytes
+    ['encrypt', 'decrypt']
+  )
+  // Store in IndexedDB (persists across page reloads within the session)
+  await new Promise((resolve, reject) => {
+    const tx = idb.transaction(DB_STORE, 'readwrite')
+    const req = tx.objectStore(DB_STORE).put(key, WRAP_KEY_ID)
+    req.onsuccess = () => resolve()
+    req.onerror = () => reject(req.error)
+  })
   return key
 }
 
-function xorObfuscate(str, hexKey) {
-  const keyBytes = hexKey.match(/.{2}/g).map(h => parseInt(h, 16))
-  const encoded = new TextEncoder().encode(str)
-  const result = new Uint8Array(encoded.length)
-  for (let i = 0; i < encoded.length; i++) {
-    result[i] = encoded[i] ^ keyBytes[i % keyBytes.length]
-  }
-  return btoa(String.fromCharCode(...result))
-}
-
-function xorDeobfuscate(b64, hexKey) {
-  const keyBytes = hexKey.match(/.{2}/g).map(h => parseInt(h, 16))
-  const binary = atob(b64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length]
-  }
-  return new TextDecoder().decode(bytes)
-}
-
-export function getCachedPassphrase() {
+export async function getCachedPassphrase() {
   const stored = sessionStorage.getItem(SESSION_KEY)
-  if (!stored) return null
+  const ivB64 = sessionStorage.getItem(SESSION_IV)
+  if (!stored || !ivB64) return null
   try {
-    const key = sessionStorage.getItem(OBFUSCATION_KEY)
-    if (!key) return null
-    return xorDeobfuscate(stored, key)
+    const wrapKey = await getOrCreateWrappingKey()
+    const iv = new Uint8Array(b642ab(ivB64))
+    const ciphertext = b642ab(stored)
+    const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, wrapKey, ciphertext)
+    return new TextDecoder().decode(plainBuf)
   } catch {
+    // Key mismatch (new tab/session) — clear stale data
+    sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(SESSION_IV)
     return null
   }
 }
 
-export function cachePassphrase(passphrase) {
-  const key = getOrCreateObfuscationKey()
-  sessionStorage.setItem(SESSION_KEY, xorObfuscate(passphrase, key))
+export async function cachePassphrase(passphrase) {
+  const wrapKey = await getOrCreateWrappingKey()
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    wrapKey,
+    new TextEncoder().encode(passphrase)
+  )
+  sessionStorage.setItem(SESSION_KEY, ab2b64(ciphertext))
+  sessionStorage.setItem(SESSION_IV, ab2b64(iv.buffer))
 }
 
 export function clearCachedPassphrase() {
   sessionStorage.removeItem(SESSION_KEY)
-  sessionStorage.removeItem(OBFUSCATION_KEY)
+  sessionStorage.removeItem(SESSION_IV)
+  // Also clear the wrapping key so it's regenerated next session
+  try {
+    const req = indexedDB.open(DB_NAME, 1)
+    req.onsuccess = () => {
+      const db = req.result
+      const tx = db.transaction(DB_STORE, 'readwrite')
+      tx.objectStore(DB_STORE).delete(WRAP_KEY_ID)
+    }
+  } catch { /* best effort */ }
 }

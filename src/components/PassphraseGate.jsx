@@ -4,16 +4,30 @@ import { useAuth } from '../context/AuthContext'
 import { Lock, Eye, EyeOff, LogOut } from 'lucide-react'
 
 function getPassphraseStrength(pw) {
-  if (!pw) return { score: 0, label: '', color: '' }
+  if (!pw) return { score: 0, label: '', color: '', hint: '' }
   let score = 0
+
+  // Length is the biggest factor for entropy
   if (pw.length >= 12) score++
   if (pw.length >= 16) score++
-  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++
-  if (/\d/.test(pw)) score++
-  if (/[^a-zA-Z0-9]/.test(pw)) score++
-  if (pw.length >= 20) score++
+  if (pw.length >= 24) score++
+
+  // Character diversity
+  const hasLower = /[a-z]/.test(pw)
+  const hasUpper = /[A-Z]/.test(pw)
+  const hasDigit = /\d/.test(pw)
+  const hasSymbol = /[^a-zA-Z0-9]/.test(pw)
+  if (hasLower && hasUpper) score++
+  if (hasDigit || hasSymbol) score++
+
+  // Bonus for passphrase-like input (multiple words separated by spaces)
+  const wordCount = pw.trim().split(/\s+/).filter(w => w.length > 1).length
+  if (wordCount >= 4) score += 2
+  else if (wordCount >= 3) score++
+
   // Penalize common patterns
-  if (/^(.)\1+$/.test(pw) || /^(012|123|234|345|456|567|678|789|abc|password|qwerty)/i.test(pw)) score = Math.max(0, score - 2)
+  if (/^(.)\1+$/.test(pw) || /^(012|123|234|345|456|567|678|789|abc|password|qwerty)/i.test(pw)) score = Math.max(0, score - 3)
+
   const levels = [
     { label: 'Very weak', color: 'bg-accent-red' },
     { label: 'Weak', color: 'bg-accent-red' },
@@ -21,9 +35,17 @@ function getPassphraseStrength(pw) {
     { label: 'Good', color: 'bg-accent-amber' },
     { label: 'Strong', color: 'bg-accent-green' },
     { label: 'Very strong', color: 'bg-accent-green' },
+    { label: 'Excellent', color: 'bg-accent-green' },
   ]
   const idx = Math.min(score, levels.length - 1)
-  return { score, max: levels.length, label: levels[idx].label, color: levels[idx].color }
+
+  // Contextual hint
+  let hint = ''
+  if (pw.length < 12) hint = `Need ${12 - pw.length} more characters`
+  else if (wordCount < 3 && pw.length < 20) hint = 'Try 4+ random words for stronger entropy'
+  else if (score < 4) hint = 'Add more words or mix in numbers/symbols'
+
+  return { score, max: levels.length, label: levels[idx].label, color: levels[idx].color, hint }
 }
 
 export default function PassphraseGate() {
@@ -86,7 +108,7 @@ export default function PassphraseGate() {
           </h2>
           <p className="text-text-muted text-sm mt-1">
             {isSetup
-              ? 'This passphrase encrypts all your medical data. Write it down — it cannot be recovered.'
+              ? 'Use 4+ random words (e.g. "purple tiger morning shelf"). Write it down — it cannot be recovered.'
               : 'Enter your passphrase to decrypt your medical records.'}
           </p>
         </div>
@@ -97,7 +119,7 @@ export default function PassphraseGate() {
               type={showPassword ? 'text' : 'password'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isSetup ? 'Create a strong passphrase' : 'Enter your passphrase'}
+              placeholder={isSetup ? 'e.g. correct horse battery staple' : 'Enter your passphrase'}
               autoComplete={isSetup ? 'new-password' : 'current-password'}
               className="w-full bg-bg-tertiary border border-border-primary rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-blue/50 transition-all pr-10"
               autoFocus
@@ -114,11 +136,11 @@ export default function PassphraseGate() {
           {isSetup && input && (
             <div className="space-y-1.5">
               <div className="flex gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < Math.ceil(strength.score * 5 / strength.max) ? strength.color : 'bg-bg-tertiary'}`} />
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < Math.ceil(strength.score * 6 / strength.max) ? strength.color : 'bg-bg-tertiary'}`} />
                 ))}
               </div>
-              <p className="text-xs text-text-muted">{strength.label}{input.length < 12 ? ` — need ${12 - input.length} more characters` : ''}</p>
+              <p className="text-xs text-text-muted">{strength.label}{strength.hint ? ` — ${strength.hint}` : ''}</p>
             </div>
           )}
 

@@ -29,13 +29,16 @@ export function DataProvider({ children }) {
     }
     db.getEncryptionSettings(user.id).then(settings => {
       setHasPassphrase(!!settings)
-      // Check for cached passphrase
-      const cached = getCachedPassphrase()
-      if (cached && settings) {
-        verifyPassphrase(cached, settings.verification_hash).then(valid => {
-          if (valid) {
-            setPassphrase(cached)
-            setIsUnlocked(true)
+      // Check for cached passphrase (async — uses Web Crypto wrapping key)
+      if (settings) {
+        getCachedPassphrase().then(cached => {
+          if (cached) {
+            verifyPassphrase(cached, settings.verification_hash).then(valid => {
+              if (valid) {
+                setPassphrase(cached)
+                setIsUnlocked(true)
+              }
+            })
           }
         })
       }
@@ -92,7 +95,7 @@ export function DataProvider({ children }) {
     const hash = await createVerificationHash(newPassphrase)
     await db.saveEncryptionSettings(user.id, hash)
     setPassphrase(newPassphrase)
-    cachePassphrase(newPassphrase)
+    await cachePassphrase(newPassphrase)
     setHasPassphrase(true)
     setIsUnlocked(true)
   }
@@ -105,7 +108,7 @@ export function DataProvider({ children }) {
     const valid = await verifyPassphrase(inputPassphrase, settings.verification_hash)
     if (valid) {
       setPassphrase(inputPassphrase)
-      cachePassphrase(inputPassphrase)
+      await cachePassphrase(inputPassphrase)
       setIsUnlocked(true)
       return true
     }
