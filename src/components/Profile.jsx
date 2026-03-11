@@ -30,8 +30,8 @@ export default function Profile() {
   const [draft, setDraft] = useState(null)
 
   const emptyProfile = {
-    name: user?.user_metadata?.full_name || '', age: '', sex: '', dob: '', height: '', weight: '',
-    blood_type: '', member_id: '', primary_physician: '', insurance: '', bmi: '', emergency_contact: ''
+    name: user?.user_metadata?.full_name || '', age: null, sex: '', dob: '', height: '', weight: '',
+    blood_type: '', member_id: '', primary_physician: '', insurance: '', bmi: null, emergency_contact: ''
   }
 
   // Auto-enter edit mode if no patient exists
@@ -54,7 +54,8 @@ export default function Profile() {
   const save = async () => {
     setSaving(true)
     try {
-      await db.upsertPatient(user.id, draft, passphrase)
+      const sanitized = { ...draft, age: draft.age ? Number(draft.age) || null : null, bmi: draft.bmi ? Number(draft.bmi) || null : null }
+      await db.upsertPatient(user.id, sanitized, passphrase)
       await loadAllData()
       setEditing(false)
       setDraft(null)

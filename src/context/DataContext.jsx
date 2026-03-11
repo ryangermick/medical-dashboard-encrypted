@@ -61,9 +61,9 @@ export function DataProvider({ children }) {
         const meta = user.user_metadata || {}
         const autoProfile = {
           name: meta.full_name || meta.name || user.email?.split('@')[0] || '',
-          age: '', sex: '', dob: '', height: '', weight: '',
+          age: null, sex: '', dob: '', height: '', weight: '',
           blood_type: '', member_id: '', primary_physician: '',
-          insurance: '', bmi: '', emergency_contact: '',
+          insurance: '', bmi: null, emergency_contact: '',
         }
         await db.upsertPatient(user.id, autoProfile, passphrase)
         p = autoProfile
