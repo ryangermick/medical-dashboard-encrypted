@@ -114,6 +114,7 @@ export default function PassphraseGate() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input type="text" autoComplete="username" value={user?.email || ''} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
