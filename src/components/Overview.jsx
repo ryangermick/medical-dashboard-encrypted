@@ -75,8 +75,9 @@ export default function Overview() {
       const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       if (Array.isArray(results)) {
         results.forEach(r => {
-          if (r.status === 'elevated' || r.status === 'high') {
-            list.push({ type: 'watch', title: `${r.name} Elevated`, description: `${r.value} ${r.unit} (range: ${r.range})`, category: lab.panel_abbr || 'Labs', flag: { ...r, panel: lab.panel_name, drawn_date: lab.drawn_date } })
+          const normalStatuses = ['normal', 'optimal', 'within range']
+          if (r.status && !normalStatuses.includes(r.status.toLowerCase())) {
+            list.push({ type: 'watch', title: `${r.name} — ${r.status}`, description: `${r.value} ${r.unit} (range: ${r.range})`, category: lab.panel_abbr || 'Labs', flag: { ...r, panel: lab.panel_name, drawn_date: lab.drawn_date } })
           }
         })
       }

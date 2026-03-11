@@ -19,11 +19,16 @@ export default function Insights() {
     labResults.forEach(lab => {
       const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       if (Array.isArray(results)) {
+        const normalStatuses = ['normal', 'optimal', 'within range']
         results.forEach(r => {
-          if (r.status === 'elevated') {
-            list.push({ type: 'watch', title: `${r.name} Elevated`, description: `At ${r.value} ${r.unit}, this is above the normal range of ${r.range}. Discuss with your physician.`, category: lab.panel_abbr || 'Labs' })
+          if (r.status && !normalStatuses.includes(r.status.toLowerCase())) {
+            list.push({ type: 'watch', title: `${r.name} — ${r.status}`, description: `At ${r.value} ${r.unit}, this is outside the normal range of ${r.range}. Discuss with your physician.`, category: lab.panel_abbr || 'Labs' })
           }
         })
+        const normalCount = results.filter(r => r.status && normalStatuses.includes(r.status.toLowerCase())).length
+        if (normalCount > 0 && normalCount === results.length) {
+          list.push({ type: 'good', title: `${lab.panel_abbr || 'Panel'} — All Normal`, description: `All ${results.length} markers in this panel are within normal range.`, category: lab.panel_abbr || 'Labs' })
+        }
       }
     })
 
