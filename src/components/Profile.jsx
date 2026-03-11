@@ -65,7 +65,21 @@ export default function Profile() {
     }
   }
 
-  const update = (key, val) => setDraft(d => ({ ...d, [key]: val }))
+  const calcAge = (dob) => {
+    if (!dob) return ''
+    const birth = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - birth.getFullYear()
+    const m = today.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+    return String(age)
+  }
+
+  const update = (key, val) => setDraft(d => {
+    const next = { ...d, [key]: val }
+    if (key === 'dob') next.age = calcAge(val)
+    return next
+  })
   const data = editing ? draft : (patient || emptyProfile)
 
   const emergency = patient?.emergency_contact
@@ -120,7 +134,7 @@ export default function Profile() {
           <Field label="Full Name" value={data.name} editing={editing} onChange={v => update('name', v)} />
           <Field label="Date of Birth" value={data.dob} editing={editing} onChange={v => update('dob', v)} type="date" />
           <Field label="Sex" value={data.sex} editing={editing} onChange={v => update('sex', v)} options={['Male', 'Female', 'Other']} />
-          <Field label="Age" value={String(data.age)} editing={editing} onChange={v => update('age', v)} />
+          <Field label="Age" value={data.dob ? calcAge(data.dob) : String(data.age || '')} editing={editing && !data.dob} onChange={v => update('age', v)} />
           <Field label="Height" value={data.height} editing={editing} onChange={v => update('height', v)} />
           <Field label="Weight" value={data.weight} editing={editing} onChange={v => update('weight', v)} />
           <Field label="Blood Type" value={data.blood_type} editing={editing} onChange={v => update('blood_type', v)} options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']} />
