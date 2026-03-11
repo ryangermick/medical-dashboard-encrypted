@@ -4,7 +4,7 @@ import { encryptFields, decryptFields } from './crypto'
 
 // Field definitions: which fields to encrypt per table
 const ENCRYPTED_FIELDS = {
-  patients: ['name', 'dob', 'height', 'weight', 'blood_type', 'primary_physician', 'insurance', 'emergency_contact', 'member_id'],
+  patients: ['name', 'dob', 'sex', 'height', 'weight', 'blood_type', 'primary_physician', 'insurance', 'emergency_contact', 'member_id'],
   vitals: ['value', 'notes'],
   lab_results: ['panel_name', 'results'],  // results is JSON
   medications: ['name', 'dose', 'purpose', 'frequency'],
