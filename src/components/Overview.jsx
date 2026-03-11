@@ -76,7 +76,7 @@ export default function Overview() {
       if (Array.isArray(results)) {
         results.forEach(r => {
           const normalStatuses = ['normal', 'optimal', 'within range']
-          if (r.status && !normalStatuses.includes(r.status.toLowerCase())) {
+          if (r.status && !normalStatuses.includes((r.status || '').toLowerCase())) {
             list.push({ type: 'watch', title: `${r.name} — ${r.status}`, description: `${r.value} ${r.unit} (range: ${r.range})`, category: lab.panel_abbr || 'Labs', flag: { ...r, panel: lab.panel_name, drawn_date: lab.drawn_date } })
           }
         })

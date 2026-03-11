@@ -21,11 +21,11 @@ export default function Insights() {
       if (Array.isArray(results)) {
         const normalStatuses = ['normal', 'optimal', 'within range']
         results.forEach(r => {
-          if (r.status && !normalStatuses.includes(r.status.toLowerCase())) {
+          if (r.status && !normalStatuses.includes((r.status || '').toLowerCase())) {
             list.push({ type: 'watch', title: `${r.name} — ${r.status}`, description: `At ${r.value} ${r.unit}, this is outside the normal range of ${r.range}. Discuss with your physician.`, category: lab.panel_abbr || 'Labs' })
           }
         })
-        const normalCount = results.filter(r => r.status && normalStatuses.includes(r.status.toLowerCase())).length
+        const normalCount = results.filter(r => r.status && normalStatuses.includes((r.status || '').toLowerCase())).length
         if (normalCount > 0 && normalCount === results.length) {
           list.push({ type: 'good', title: `${lab.panel_abbr || 'Panel'} — All Normal`, description: `All ${results.length} markers in this panel are within normal range.`, category: lab.panel_abbr || 'Labs' })
         }
