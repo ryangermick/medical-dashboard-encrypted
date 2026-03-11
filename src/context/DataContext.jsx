@@ -1,13 +1,16 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
-import { getCachedPassphrase, cachePassphrase, clearCachedPassphrase, createVerificationHash, verifyPassphrase } from '../lib/crypto'
+import { getCachedPassphrase, cachePassphrase, clearCachedPassphrase, createVerificationHash, verifyPassphrase, generateRecoveryCode, createRecoveryBlob, recoverPassphrase } from '../lib/crypto'
 import * as db from '../lib/db'
 
 const DataContext = createContext({})
 
 export function DataProvider({ children }) {
   const { user } = useAuth()
-  const [passphrase, setPassphrase] = useState(null)
+  // Use ref for passphrase to minimize string copies from re-renders
+  // A state counter triggers dependent effects without exposing the string in state
+  const passphraseRef = useRef(null)
+  const [unlockVersion, setUnlockVersion] = useState(0)
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [hasPassphrase, setHasPassphrase] = useState(null) // null = loading
   const [patient, setPatient] = useState(null)
@@ -24,7 +27,7 @@ export function DataProvider({ children }) {
     if (!user) {
       setHasPassphrase(null)
       setIsUnlocked(false)
-      setPassphrase(null)
+      passphraseRef.current = null
       return
     }
     db.getEncryptionSettings(user.id).then(settings => {
@@ -35,8 +38,9 @@ export function DataProvider({ children }) {
           if (cached) {
             verifyPassphrase(cached, settings.verification_hash).then(valid => {
               if (valid) {
-                setPassphrase(cached)
+                passphraseRef.current = cached
                 setIsUnlocked(true)
+                setUnlockVersion(v => v + 1)
               }
             })
           }
@@ -47,17 +51,18 @@ export function DataProvider({ children }) {
 
   // Load all data when unlocked
   const loadAllData = useCallback(async () => {
-    if (!user || !passphrase) return
+    const pp = passphraseRef.current
+    if (!user || !pp) return
     setDataLoading(true)
     try {
       let [p, v, l, m, a, g, d] = await Promise.all([
-        db.getPatient(user.id, passphrase),
-        db.getVitals(user.id, passphrase),
-        db.getLabResults(user.id, passphrase),
-        db.getMedications(user.id, passphrase),
-        db.getAllergies(user.id, passphrase),
-        db.getGenetics(user.id, passphrase),
-        db.getDocuments(user.id, passphrase),
+        db.getPatient(user.id, pp),
+        db.getVitals(user.id, pp),
+        db.getLabResults(user.id, pp),
+        db.getMedications(user.id, pp),
+        db.getAllergies(user.id, pp),
+        db.getGenetics(user.id, pp),
+        db.getDocuments(user.id, pp),
       ])
       // Auto-create patient profile from Google account if none exists
       if (!p && user) {
@@ -68,7 +73,7 @@ export function DataProvider({ children }) {
           blood_type: '', member_id: '', primary_physician: '',
           insurance: '', bmi: null, emergency_contact: '',
         }
-        await db.upsertPatient(user.id, autoProfile, passphrase)
+        await db.upsertPatient(user.id, autoProfile, pp)
         p = autoProfile
       }
       setPatient(p)
@@ -83,21 +88,26 @@ export function DataProvider({ children }) {
     } finally {
       setDataLoading(false)
     }
-  }, [user, passphrase])
+  }, [user, unlockVersion])
 
   useEffect(() => {
     if (isUnlocked) loadAllData()
-  }, [isUnlocked, loadAllData])
+  }, [isUnlocked, loadAllData, unlockVersion])
 
-  // Set up passphrase for first time
+  // Set up passphrase for first time — returns recovery code (shown once)
   const setupPassphrase = async (newPassphrase) => {
-    if (!user) return
+    if (!user) return null
     const hash = await createVerificationHash(newPassphrase)
-    await db.saveEncryptionSettings(user.id, hash)
-    setPassphrase(newPassphrase)
+    // Generate recovery key and encrypt passphrase with it
+    const recoveryCode = generateRecoveryCode()
+    const recoveryBlob = await createRecoveryBlob(newPassphrase, recoveryCode)
+    await db.saveEncryptionSettings(user.id, hash, recoveryBlob)
+    passphraseRef.current = newPassphrase
     await cachePassphrase(newPassphrase)
     setHasPassphrase(true)
     setIsUnlocked(true)
+    setUnlockVersion(v => v + 1)
+    return recoveryCode // caller must display this to the user
   }
 
   // Unlock with existing passphrase
@@ -107,17 +117,37 @@ export function DataProvider({ children }) {
     if (!settings) return false
     const valid = await verifyPassphrase(inputPassphrase, settings.verification_hash)
     if (valid) {
-      setPassphrase(inputPassphrase)
+      passphraseRef.current = inputPassphrase
       await cachePassphrase(inputPassphrase)
       setIsUnlocked(true)
+      setUnlockVersion(v => v + 1)
       return true
+    }
+    return false
+  }
+
+  // Recover using recovery code
+  const recoverWithCode = async (recoveryCode) => {
+    if (!user) return false
+    const settings = await db.getEncryptionSettings(user.id)
+    if (!settings?.recovery_blob) return false
+    const recovered = await recoverPassphrase(recoveryCode, settings.recovery_blob)
+    if (!recovered) return false
+    // Verify the recovered passphrase actually works
+    const valid = await verifyPassphrase(recovered, settings.verification_hash)
+    if (valid) {
+      passphraseRef.current = recovered
+      await cachePassphrase(recovered)
+      setIsUnlocked(true)
+      setUnlockVersion(v => v + 1)
+      return recovered // return passphrase so user can see/save it
     }
     return false
   }
 
   const lock = useCallback(() => {
     clearCachedPassphrase()
-    setPassphrase(null)
+    passphraseRef.current = null // hint to GC
     setIsUnlocked(false)
     setPatient(null)
     setVitals([])
@@ -156,8 +186,8 @@ export function DataProvider({ children }) {
 
   return (
     <DataContext.Provider value={{
-      passphrase, isUnlocked, hasPassphrase,
-      setupPassphrase, unlock, lock,
+      passphrase: passphraseRef.current, isUnlocked, hasPassphrase,
+      setupPassphrase, unlock, recoverWithCode, lock,
       patient, vitals, labResults, medications, allergies, genetics, documents,
       dataLoading, loadAllData,
     }}>

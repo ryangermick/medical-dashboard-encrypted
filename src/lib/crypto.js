@@ -165,6 +165,43 @@ export async function verifyPassphrase(passphrase, storedHash) {
   }
 }
 
+// ---- Recovery Key ----
+// Generates a high-entropy recovery code and encrypts the passphrase with it.
+// The user must save the recovery code — it's shown once and never stored.
+
+const RECOVERY_WORDLIST = [
+  'anchor','badge','cabin','delta','eagle','flame','globe','haven','ivory','joker',
+  'karma','lunar','maple','noble','orbit','pearl','quest','ridge','solar','thorn',
+  'ultra','vivid','wager','xenon','yield','zephyr','amber','blaze','cedar','drift',
+  'ember','frost','grace','haste','inlet','jewel','knack','latch','merit','nexus',
+  'oasis','plumb','quilt','rover','spine','trace','unity','vault','wheat','axiom',
+  'brine','clash','dwell','evoke','forge','gleam','hover','irony','joist','kneel',
+  'lumen','mocha','nerve','optic','prism','quota','realm','stoke','truce','usher',
+  'vigor','whirl','oxide','yearn','zilch','agate','birch','coral','dense','epoch',
+  'flora','grail','heron','ionic','jumbo','kiosk','lyric','mirth','notch','onyx',
+  'poise','quirk','relic','surge','tempo','umbra','verge','wraith','xeric','yucca',
+]
+
+export function generateRecoveryCode() {
+  // 8 random words from 100-word list = ~53 bits of entropy
+  const indices = crypto.getRandomValues(new Uint8Array(8))
+  return Array.from(indices, i => RECOVERY_WORDLIST[i % RECOVERY_WORDLIST.length]).join('-')
+}
+
+// Encrypt the passphrase with the recovery code
+export async function createRecoveryBlob(passphrase, recoveryCode) {
+  return encrypt(passphrase, recoveryCode)
+}
+
+// Recover passphrase from recovery code + stored blob
+export async function recoverPassphrase(recoveryCode, recoveryBlob) {
+  try {
+    return await decrypt(recoveryBlob, recoveryCode)
+  } catch {
+    return null
+  }
+}
+
 // Cache key management using Web Crypto non-extractable wrapping key + IndexedDB
 // The wrapping key lives in browser-protected memory (non-extractable CryptoKey).
 // Even if XSS reads sessionStorage, it gets ciphertext it can't decrypt without

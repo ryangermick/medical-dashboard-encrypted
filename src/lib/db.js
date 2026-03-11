@@ -207,13 +207,15 @@ export async function getEncryptionSettings(userId) {
   return data
 }
 
-export async function saveEncryptionSettings(userId, verificationHash) {
+export async function saveEncryptionSettings(userId, verificationHash, recoveryBlob = null) {
+  const row = {
+    user_id: userId,
+    verification_hash: verificationHash,
+  }
+  if (recoveryBlob) row.recovery_blob = recoveryBlob
   const { data, error } = await supabase
     .from('encryption_settings')
-    .upsert({
-      user_id: userId,
-      verification_hash: verificationHash,
-    }, { onConflict: 'user_id' })
+    .upsert(row, { onConflict: 'user_id' })
     .select()
     .single()
   if (error) throw error
