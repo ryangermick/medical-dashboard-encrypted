@@ -16,12 +16,14 @@ export default async function handler(req, res) {
   const systemPrompt = `You are a medical record parser. Extract structured data from medical documents.
 Return a JSON object with these optional arrays:
 {
-  "vitals": [{ "vital_type": "heart_rate|blood_pressure|temperature|oxygen_sat|respiratory_rate|resting_hr|weight", "value": "JSON object: {avg,min,max} for most vitals or {systolic,diastolic} for blood_pressure", "unit": "string", "recorded_at": "YYYY-MM-DD", "status": "normal|elevated|high", "reference_range": "string" }],
-  "labResults": [{ "panel_name": "string", "panel_abbr": "string", "drawn_date": "YYYY-MM-DD", "results": "[{name, value, unit, range, status}]" }],
+  "vitals": [{ "vital_type": "heart_rate|blood_pressure|temperature|oxygen_sat|respiratory_rate|resting_hr|weight", "value": "JSON object: {avg,min,max} for most vitals or {systolic,diastolic} for blood_pressure", "unit": "string", "recorded_at": "YYYY-MM-DD (REQUIRED — extract the measurement date)", "status": "normal|elevated|high", "reference_range": "string" }],
+  "labResults": [{ "panel_name": "string", "panel_abbr": "string", "drawn_date": "YYYY-MM-DD (REQUIRED — extract the specimen collection date, order date, or report date)", "results": "[{name, value, unit, range, status}]" }],
   "medications": [{ "name": "string", "dose": "string", "frequency": "string", "purpose": "string", "start_date": "YYYY-MM-DD", "active": true }],
   "allergies": [{ "allergen": "string", "severity": "Mild|Moderate|Severe", "reaction": "string", "confirmed": true }],
   "genetics": { "riskFactors": [{ "condition": "string", "gene": "string", "snp": "string", "odds": "string (e.g. '1.3x')", "status": "watch|good" }], "pharmacogenomics": [{ "drug": "string", "gene": "string", "metabolism": "Normal|Poor|Rapid|Intermediate", "note": "string" }], "ancestry": { "composition": [{"population": "string", "percentage": 0}], "maternalHaplogroup": "string", "paternalHaplogroup": "string", "summary": "string" }, "carrierStatus": [{ "condition": "string", "status": "carrier|not_a_carrier|likely_not_a_carrier", "gene": "string" }], "traits": [{ "trait": "string", "result": "string" }], "wellness": [{ "topic": "string", "result": "string", "detail": "string" }] }
 }
+CRITICAL: Dates are essential for tracking health over time. ALWAYS extract dates (drawn_date, recorded_at) from the document. Look for collection date, specimen date, order date, visit date, or report date. Use YYYY-MM-DD format.
+
 IMPORTANT ROUTING RULES:
 - "labResults" is ONLY for blood tests, urine tests, and clinical laboratory panels (CBC, CMP, lipid panels, A1C, etc.)
 - "genetics" is for ALL genetic/genomic data including: 23andMe, ancestry composition, haplogroups, health predispositions, carrier status, wellness reports, traits, pharmacogenomics, and raw SNP data

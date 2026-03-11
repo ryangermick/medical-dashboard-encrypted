@@ -83,7 +83,7 @@ export default function BloodWork() {
                   </div>
                   <div className="text-left">
                     <h3 className="text-sm font-medium text-text-primary">{panelName}</h3>
-                    <p className="text-xs text-text-muted">{panel.panel_abbr} • {panel.parsedResults.length} markers</p>
+                    <p className="text-xs text-text-muted">{panel.panel_abbr} • {panel.parsedResults.length} markers{panel.drawn_date ? ` • ${panel.drawn_date}` : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
