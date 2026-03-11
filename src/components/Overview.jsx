@@ -98,13 +98,20 @@ export default function Overview() {
     return list
   }, [labResults, weightHistory, medications, allergies])
 
-  if (!patient) {
+  const hasAnyData = patient || vitals.length > 0 || labResults.length > 0 || medications.length > 0 || allergies.length > 0
+
+  if (!hasAnyData) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-text-muted mb-4">No patient data yet. Load demo data or upload medical records to get started.</p>
-        <button onClick={() => navigate('/settings')} className="px-4 py-2 rounded-xl bg-accent-blue text-white text-sm hover:bg-accent-blue/80 transition-all">
-          Go to Settings
-        </button>
+        <p className="text-text-muted mb-4">No data yet. Upload medical records or create a profile to get started.</p>
+        <div className="flex gap-3">
+          <button onClick={() => navigate('/upload')} className="px-4 py-2 rounded-xl bg-accent-blue text-white text-sm hover:bg-accent-blue/80 transition-all">
+            Upload Records
+          </button>
+          <button onClick={() => navigate('/profile')} className="px-4 py-2 rounded-xl bg-bg-tertiary text-text-primary text-sm hover:bg-bg-hover transition-all border border-border-primary">
+            Create Profile
+          </button>
+        </div>
       </div>
     )
   }
@@ -127,7 +134,7 @@ export default function Overview() {
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Health Overview</h1>
           <p className="text-xs sm:text-sm text-text-muted mt-1">
-            Last updated: {patient.last_visit} {patient.primary_physician && `• ${patient.primary_physician}`}
+            {patient?.last_visit ? `Last updated: ${patient.last_visit}` : ''} {patient?.primary_physician && `• ${patient.primary_physician}`}
           </p>
         </div>
         {healthScore > 0 && (
