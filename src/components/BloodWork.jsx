@@ -2,6 +2,7 @@ import { safeJsonParse } from '../lib/crypto'
 import { useState, useMemo } from 'react'
 import { useData } from '../context/DataContext'
 import { Droplets, CheckCircle, AlertTriangle, ChevronRight } from 'lucide-react'
+import FlagModal from './FlagModal'
 
 const StatusBar = ({ value, range, status }) => {
   let min = 0, max = 100, rangeMin = 0, rangeMax = 100
@@ -32,6 +33,7 @@ const StatusBar = ({ value, range, status }) => {
 export default function BloodWork() {
   const { labResults } = useData()
   const [expandedPanel, setExpandedPanel] = useState(0)
+  const [selectedFlag, setSelectedFlag] = useState(null)
 
   const panels = useMemo(() => {
     return labResults.map(lab => {
@@ -103,7 +105,10 @@ export default function BloodWork() {
                       <span className="col-span-2 text-right">Status</span>
                     </div>
                     {panel.parsedResults.map((result, rIdx) => (
-                      <div key={rIdx} className={`sm:grid sm:grid-cols-12 gap-4 items-center px-4 py-3 rounded-xl ${result.status !== 'normal' ? 'bg-accent-amber/5' : 'hover:bg-bg-hover'} transition-all`}>
+                      <div
+                        key={rIdx}
+                        onClick={() => result.status !== 'normal' && setSelectedFlag({ ...result, panel: panelName, drawn_date: panel.drawn_date })}
+                        className={`sm:grid sm:grid-cols-12 gap-4 items-center px-4 py-3 rounded-xl ${result.status !== 'normal' ? 'bg-accent-amber/5 cursor-pointer hover:bg-accent-amber/10' : 'hover:bg-bg-hover'} transition-all`}>
                         <span className="sm:col-span-3 text-sm text-text-primary font-medium block">{result.name}</span>
                         <span className={`sm:col-span-2 text-sm font-mono sm:text-right block ${result.status !== 'normal' ? 'text-accent-amber font-semibold' : 'text-text-primary'}`}>{result.value}</span>
                         <span className="sm:col-span-1 text-xs text-text-muted block">{result.unit}</span>
@@ -123,6 +128,8 @@ export default function BloodWork() {
           )
         })}
       </div>
+
+      <FlagModal flag={selectedFlag} onClose={() => setSelectedFlag(null)} />
     </div>
   )
 }

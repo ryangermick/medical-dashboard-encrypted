@@ -1,9 +1,10 @@
 import { safeJsonParse } from '../lib/crypto'
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Heart, Thermometer, Wind, Droplets, Activity, TrendingDown, AlertTriangle, CheckCircle, Info, Calendar, ChevronRight, Scale } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts'
+import FlagModal from './FlagModal'
 
 const StatusDot = ({ status }) => {
   const colors = { normal: 'bg-accent-green', optimal: 'bg-accent-cyan', elevated: 'bg-accent-amber', high: 'bg-accent-red' }
@@ -53,6 +54,7 @@ function getVitalHistory(vitals, type) {
 export default function Overview() {
   const navigate = useNavigate()
   const { patient, vitals, labResults, medications, allergies } = useData()
+  const [selectedFlag, setSelectedFlag] = useState(null)
 
   const hr = getLatestVital(vitals, 'heart_rate')
   const bp = getLatestVital(vitals, 'blood_pressure')
@@ -73,8 +75,8 @@ export default function Overview() {
       const results = typeof lab.results === 'string' ? safeJsonParse(lab.results) : lab.results
       if (Array.isArray(results)) {
         results.forEach(r => {
-          if (r.status === 'elevated') {
-            list.push({ type: 'watch', title: `${r.name} Elevated`, description: `${r.value} ${r.unit} (range: ${r.range})`, category: lab.panel_abbr || 'Labs' })
+          if (r.status === 'elevated' || r.status === 'high') {
+            list.push({ type: 'watch', title: `${r.name} Elevated`, description: `${r.value} ${r.unit} (range: ${r.range})`, category: lab.panel_abbr || 'Labs', flag: { ...r, panel: lab.panel_name, drawn_date: lab.drawn_date } })
           }
         })
       }
@@ -215,7 +217,7 @@ export default function Overview() {
               }
               const { icon: Icon, color, bg } = config[insight.type] || config.info
               return (
-                <div key={i} className="flex items-start gap-3">
+                <div key={i} onClick={() => insight.flag && setSelectedFlag(insight.flag)} className={`flex items-start gap-3 ${insight.flag ? 'cursor-pointer hover:bg-bg-hover rounded-xl p-2 -m-2' : ''}`}>
                   <div className={`p-1.5 rounded-lg ${bg}`}><Icon size={14} strokeWidth={1.5} className={color} /></div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-primary font-medium truncate">{insight.title}</p>
@@ -228,6 +230,8 @@ export default function Overview() {
           </div>
         </div>
       )}
+
+      <FlagModal flag={selectedFlag} onClose={() => setSelectedFlag(null)} />
     </div>
   )
 }

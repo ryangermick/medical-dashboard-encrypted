@@ -1,5 +1,6 @@
 import { safeJsonParse } from '../lib/crypto'
 import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { Send, Bot, User, Loader2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -126,15 +127,27 @@ function buildSystemPrompt(patient, vitals, labResults, medications, allergies, 
 
 export default function Chat() {
   const { patient, vitals, labResults, medications, allergies, genetics } = useData()
+  const location = useLocation()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+  const prefillHandled = useRef(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  // Handle prefilled question from flag modal
+  useEffect(() => {
+    if (location.state?.prefill && !prefillHandled.current) {
+      prefillHandled.current = true
+      setInput(location.state.prefill)
+      // Auto-clear the state so refresh doesn't re-trigger
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
 
   const sendMessage = async (text) => {
     if (!text.trim() || loading) return
