@@ -5,6 +5,7 @@ import { Droplets, CheckCircle, AlertTriangle, ChevronRight } from 'lucide-react
 import FlagModal from './FlagModal'
 
 const StatusBar = ({ value, range, status }) => {
+  if (!range) return null
   let min = 0, max = 100, rangeMin = 0, rangeMax = 100
   const numVal = parseFloat(value)
   if (range.includes('-')) {
