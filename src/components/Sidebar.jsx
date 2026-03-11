@@ -1,6 +1,9 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
-import { Activity, Droplets, Dna, Pill, Lightbulb, MessageCircle, UserCircle, Upload, Calendar, Shield, Lock, Unlock, LogOut, Settings } from 'lucide-react'
+import * as db from '../lib/db'
+import { Activity, Droplets, Dna, Pill, Lightbulb, MessageCircle, UserCircle, Upload, Calendar, Shield, Lock, Unlock, LogOut, Settings, Info, Download, Trash2 } from 'lucide-react'
 
 const iconMap = {
   overview: Activity,
@@ -15,8 +18,50 @@ const iconMap = {
 }
 
 export default function Sidebar({ activeTab, setActiveTab, tabs }) {
-  const { patient, isUnlocked, lock } = useData()
+  const { patient, vitals, labResults, medications, allergies, genetics, documents, isUnlocked, lock, passphrase } = useData()
   const { signOut, user } = useAuth()
+  const navigate = useNavigate()
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDownload = () => {
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      user: { email: user.email, name: user.user_metadata?.full_name },
+      patient,
+      vitals,
+      labResults,
+      medications,
+      allergies,
+      genetics,
+      documents,
+    }
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `meddash-data-${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDelete = async () => {
+    if (deleteConfirm !== 'DELETE') return
+    setDeleting(true)
+    try {
+      await db.clearAllUserData(user.id)
+      // Also delete encryption settings
+      const { supabase } = await import('../lib/supabase')
+      await supabase.from('encryption_settings').delete().eq('user_id', user.id)
+      setShowDeleteModal(false)
+      await signOut()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const displayName = patient?.name || user?.user_metadata?.full_name || 'User'
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -123,6 +168,29 @@ export default function Sidebar({ activeTab, setActiveTab, tabs }) {
           <Shield size={14} strokeWidth={1.5} className="text-accent-green" />
           <span className="text-xs text-accent-green">E2E Encrypted</span>
         </div>
+        <div className="border-t border-border-primary my-1" />
+        <button
+          onClick={() => navigate('/about')}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:bg-bg-hover hover:text-text-primary transition-all"
+        >
+          <Info size={18} strokeWidth={1.5} />
+          About Med+Dash
+        </button>
+        <button
+          onClick={handleDownload}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:bg-bg-hover hover:text-text-primary transition-all"
+        >
+          <Download size={18} strokeWidth={1.5} />
+          Download my data
+        </button>
+        <div className="border-t border-border-primary my-1" />
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all"
+        >
+          <Trash2 size={18} strokeWidth={1.5} />
+          Delete all data
+        </button>
         <button
           onClick={signOut}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-muted hover:bg-bg-hover hover:text-text-primary transition-all"
@@ -131,6 +199,50 @@ export default function Sidebar({ activeTab, setActiveTab, tabs }) {
           Sign Out
         </button>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setShowDeleteModal(false)}>
+          <div className="bg-bg-secondary border border-border-primary rounded-2xl p-6 w-full max-w-md mx-4 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <Trash2 size={20} className="text-red-500" />
+              </div>
+              <h2 className="text-lg font-semibold text-text-primary">Delete All Data?</h2>
+            </div>
+            <p className="text-sm text-text-muted">
+              This will permanently delete all your medical records, vitals, lab results, medications, genomics, chat history, and encryption settings. <strong className="text-red-400">This cannot be undone.</strong>
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs text-text-muted">Type <strong className="text-text-primary">DELETE</strong> to confirm</label>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={e => setDeleteConfirm(e.target.value)}
+                className="w-full bg-bg-tertiary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-red-500/50"
+                placeholder="DELETE"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirm('') }}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:bg-bg-hover transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteConfirm !== 'DELETE' || deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                {deleting ? 'Deleting...' : 'Delete Everything'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

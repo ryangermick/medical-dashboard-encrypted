@@ -15,6 +15,7 @@ import Upload from './components/Upload'
 import Login from './components/Login'
 import PassphraseGate from './components/PassphraseGate'
 import Settings from './components/Settings'
+import About from './components/About'
 import { Lock, Unlock } from 'lucide-react'
 import { ToastProvider } from './components/Toast'
 
@@ -68,6 +69,10 @@ function AppShell() {
         <div className="text-text-muted">Loading...</div>
       </div>
     )
+  }
+
+  if (location.pathname === '/about') {
+    return <About />
   }
 
   if (!user) {
@@ -132,6 +137,13 @@ function AppShell() {
                 {tab.label}
               </button>
             ))}
+            <div className="border-t border-border-primary my-1" />
+            <button
+              onClick={() => { navigate('/about'); setMobileMenuOpen(false) }}
+              className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-bg-hover"
+            >
+              About Med+Dash
+            </button>
           </nav>
         </div>
       )}
@@ -154,6 +166,7 @@ function AppShell() {
               <Route path="/upload" element={<Upload />} />
               <Route path="/ask-ai" element={<Chat />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/about" element={<About />} />
               <Route path="*" element={<Navigate to="/overview" replace />} />
             </Routes>
           )}
