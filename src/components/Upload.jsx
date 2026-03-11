@@ -52,37 +52,46 @@ export default function Upload() {
           continue
         }
 
-        // Save parsed data to DB (encrypted)
+        // Save parsed data to DB (encrypted) — each save independent
         const parsed = data.parsed
+        const saved = []
+        const errors = []
+
+        const trySave = async (label, fn) => {
+          try { await fn(); saved.push(label) } catch (e) { console.error(`Save ${label} failed:`, e); errors.push(label) }
+        }
 
         if (parsed.vitals?.length) {
-          await db.insertVitals(user.id, parsed.vitals, passphrase)
+          await trySave(`${parsed.vitals.length} vitals`, () => db.insertVitals(user.id, parsed.vitals, passphrase))
         }
         if (parsed.labResults?.length) {
-          await db.insertLabResults(user.id, parsed.labResults, passphrase)
+          await trySave(`${parsed.labResults.length} lab panels`, () => db.insertLabResults(user.id, parsed.labResults, passphrase))
         }
         if (parsed.medications?.length) {
-          await db.insertMedications(user.id, parsed.medications, passphrase)
+          await trySave(`${parsed.medications.length} medications`, () => db.insertMedications(user.id, parsed.medications, passphrase))
         }
         if (parsed.allergies?.length) {
-          await db.insertAllergies(user.id, parsed.allergies, passphrase)
+          await trySave(`${parsed.allergies.length} allergies`, () => db.insertAllergies(user.id, parsed.allergies, passphrase))
         }
         if (parsed.genetics) {
-          await db.upsertGenetics(user.id, { data: JSON.stringify(parsed.genetics) }, passphrase)
+          await trySave('genetics data', () => db.upsertGenetics(user.id, { data: JSON.stringify(parsed.genetics) }, passphrase))
         }
 
-        // Save document record
-        await db.insertDocument(user.id, {
+        // Save document record (truncate parsed_data if huge)
+        const docData = JSON.stringify(parsed)
+        await trySave('document record', () => db.insertDocument(user.id, {
           filename: file.name,
           file_type: file.type,
-          parsed_data: JSON.stringify(parsed),
+          parsed_data: docData.length > 50000 ? docData.substring(0, 50000) : docData,
           status: 'processed',
-        }, passphrase)
+        }, passphrase))
 
+        const msg = saved.length ? `Saved: ${saved.join(', ')}` : 'Parsed but nothing to save'
+        const errMsg = errors.length ? ` | Failed: ${errors.join(', ')}` : ''
         setResults(r => [...r, {
           file: file.name,
-          status: 'success',
-          message: `Extracted: ${parsed.vitals?.length || 0} vitals, ${parsed.labResults?.length || 0} lab panels, ${parsed.medications?.length || 0} medications, ${parsed.allergies?.length || 0} allergies${parsed.genetics ? ', genetics data' : ''}`,
+          status: errors.length ? 'error' : 'success',
+          message: msg + errMsg,
         }])
       } catch (err) {
         setResults(r => [...r, { file: file.name, status: 'error', message: err.message }])

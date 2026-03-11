@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const systemPrompt = `You are a medical record parser. Extract structured data from medical documents.
 Return a JSON object with these optional arrays:
 {
-  "vitals": [{ "vital_type": "heart_rate|blood_pressure|temperature|oxygen_sat|respiratory_rate|resting_hr|weight", "value": "{JSON with avg/min/max or systolic/diastolic}", "unit": "string", "recorded_at": "YYYY-MM-DD", "status": "normal|elevated|high", "reference_range": "string" }],
+  "vitals": [{ "vital_type": "heart_rate|blood_pressure|temperature|oxygen_sat|respiratory_rate|resting_hr|weight", "value": "JSON object: {avg,min,max} for most vitals or {systolic,diastolic} for blood_pressure", "unit": "string", "recorded_at": "YYYY-MM-DD", "status": "normal|elevated|high", "reference_range": "string" }],
   "labResults": [{ "panel_name": "string", "panel_abbr": "string", "drawn_date": "YYYY-MM-DD", "results": "[{name, value, unit, range, status}]" }],
   "medications": [{ "name": "string", "dose": "string", "frequency": "string", "purpose": "string", "start_date": "YYYY-MM-DD", "active": true }],
   "allergies": [{ "allergen": "string", "severity": "Mild|Moderate|Severe", "reaction": "string", "confirmed": true }],
@@ -26,7 +26,7 @@ Only include arrays/objects that have data. For 23andMe or genetic data, extract
 
   try {
     const parts = [
-      { text: 'Parse this medical document and extract structured data as JSON.' }
+      { text: 'Parse this medical document and extract ALL structured data as JSON. This could be a lab report, vitals report, genetic/23andMe report, prescription, or other medical record. Extract everything you can find — vitals, lab results, medications, allergies, and genetics data.' }
     ];
 
     // Add file as inline data
