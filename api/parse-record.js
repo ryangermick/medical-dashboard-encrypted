@@ -19,9 +19,10 @@ Return a JSON object with these optional arrays:
   "vitals": [{ "vital_type": "heart_rate|blood_pressure|temperature|oxygen_sat|respiratory_rate|resting_hr|weight", "value": "{JSON with avg/min/max or systolic/diastolic}", "unit": "string", "recorded_at": "YYYY-MM-DD", "status": "normal|elevated|high", "reference_range": "string" }],
   "labResults": [{ "panel_name": "string", "panel_abbr": "string", "drawn_date": "YYYY-MM-DD", "results": "[{name, value, unit, range, status}]" }],
   "medications": [{ "name": "string", "dose": "string", "frequency": "string", "purpose": "string", "start_date": "YYYY-MM-DD", "active": true }],
-  "allergies": [{ "allergen": "string", "severity": "Mild|Moderate|Severe", "reaction": "string", "confirmed": true }]
+  "allergies": [{ "allergen": "string", "severity": "Mild|Moderate|Severe", "reaction": "string", "confirmed": true }],
+  "genetics": { "riskFactors": [{ "condition": "string", "gene": "string", "snp": "string", "odds": "string (e.g. '1.3x')", "status": "watch|good" }], "pharmacogenomics": [{ "drug": "string", "gene": "string", "metabolism": "Normal|Poor|Rapid|Intermediate", "note": "string" }], "ancestry": { "summary": "string" }, "rawSnps": [{ "rsid": "string", "genotype": "string", "gene": "string", "significance": "string" }] }
 }
-Only include arrays that have data. Return ONLY valid JSON, no markdown.`;
+Only include arrays/objects that have data. For 23andMe or genetic data, extract risk factors, pharmacogenomics, and notable SNPs. Return ONLY valid JSON, no markdown.`;
 
   try {
     const parts = [

@@ -67,6 +67,9 @@ export default function Upload() {
         if (parsed.allergies?.length) {
           await db.insertAllergies(user.id, parsed.allergies, passphrase)
         }
+        if (parsed.genetics) {
+          await db.upsertGenetics(user.id, { data: JSON.stringify(parsed.genetics) }, passphrase)
+        }
 
         // Save document record
         await db.insertDocument(user.id, {
@@ -79,7 +82,7 @@ export default function Upload() {
         setResults(r => [...r, {
           file: file.name,
           status: 'success',
-          message: `Extracted: ${parsed.vitals?.length || 0} vitals, ${parsed.labResults?.length || 0} lab panels, ${parsed.medications?.length || 0} medications, ${parsed.allergies?.length || 0} allergies`,
+          message: `Extracted: ${parsed.vitals?.length || 0} vitals, ${parsed.labResults?.length || 0} lab panels, ${parsed.medications?.length || 0} medications, ${parsed.allergies?.length || 0} allergies${parsed.genetics ? ', genetics data' : ''}`,
         }])
       } catch (err) {
         setResults(r => [...r, { file: file.name, status: 'error', message: err.message }])
