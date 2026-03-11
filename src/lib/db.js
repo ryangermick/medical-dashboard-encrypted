@@ -26,8 +26,13 @@ export async function getPatient(userId, passphrase) {
 }
 
 export async function upsertPatient(userId, patient, passphrase) {
+  // Sanitize integer fields before DB insert
+  const sanitized = { ...patient }
+  sanitized.age = sanitized.age ? Number(sanitized.age) || null : null
+  sanitized.bmi = sanitized.bmi ? Number(sanitized.bmi) || null : null
+
   const encrypted = await encryptFields(
-    { ...patient, user_id: userId },
+    { ...sanitized, user_id: userId },
     ENCRYPTED_FIELDS.patients,
     passphrase
   )
