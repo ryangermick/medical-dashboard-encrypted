@@ -47,7 +47,7 @@ export function DataProvider({ children }) {
     if (!user || !passphrase) return
     setDataLoading(true)
     try {
-      const [p, v, l, m, a, g, d] = await Promise.all([
+      let [p, v, l, m, a, g, d] = await Promise.all([
         db.getPatient(user.id, passphrase),
         db.getVitals(user.id, passphrase),
         db.getLabResults(user.id, passphrase),
@@ -56,6 +56,18 @@ export function DataProvider({ children }) {
         db.getGenetics(user.id, passphrase),
         db.getDocuments(user.id, passphrase),
       ])
+      // Auto-create patient profile from Google account if none exists
+      if (!p && user) {
+        const meta = user.user_metadata || {}
+        const autoProfile = {
+          name: meta.full_name || meta.name || user.email?.split('@')[0] || '',
+          age: '', sex: '', dob: '', height: '', weight: '',
+          blood_type: '', member_id: '', primary_physician: '',
+          insurance: '', bmi: '', emergency_contact: '',
+        }
+        await db.upsertPatient(user.id, autoProfile, passphrase)
+        p = autoProfile
+      }
       setPatient(p)
       setVitals(v)
       setLabResults(l)
